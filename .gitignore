@@ -9,3 +9,6 @@ backups/
 
 # Build anterior que se conserva solo como respaldo local
 cueva-boutique-web.zip
+
+# Skills instaladas automáticamente por herramientas
+.agents/
