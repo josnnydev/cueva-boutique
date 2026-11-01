@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es-DO">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, follow">
+  <title>Página no encontrada | Cueva Boutique</title>
+  <meta name="theme-color" content="#060609">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <style>
+    :root {
+      --bg: #060609;
+      --gold: #d4af37;
+      --gold-light: #f3d98b;
+      --text: #f6f1e7;
+      --text-soft: rgba(246, 241, 231, 0.72);
+      --line: rgba(212, 175, 55, 0.22);
+    }
+    * { box-sizing: border-box; }
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      padding: 2rem;
+      place-items: center;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(57, 230, 208, 0.16), transparent 34%),
+        radial-gradient(circle at 90% 10%, rgba(255, 79, 184, 0.14), transparent 34%),
+        var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+    .card {
+      width: min(100%, 520px);
+      padding: 2.75rem 2rem;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(10, 10, 20, 0.82);
+      text-align: center;
+    }
+    .logo {
+      display: block;
+      height: 88px;
+      width: auto;
+      margin: 0 auto 1.5rem;
+      mix-blend-mode: screen;
+    }
+    .kicker {
+      margin: 0 0 0.6rem;
+      color: var(--gold-light);
+      font-size: 0.68rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0 0 0.9rem;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 6vw, 2.8rem);
+      font-weight: 500;
+      line-height: 1.1;
+    }
+    p {
+      margin: 0 0 1.75rem;
+      color: var(--text-soft);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      justify-content: center;
+    }
+    a {
+      display: inline-block;
+      padding: 0.85rem 1.4rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .primary {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #0a0a10;
+    }
+    .ghost {
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+    a:focus-visible {
+      outline: 2px solid var(--gold-light);
+      outline-offset: 3px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img class="logo" src="/assets/img/logo-cueva.webp" alt="Cueva Boutique" width="240" height="240">
+    <p class="kicker">Error 404</p>
+    <h1>Esta página no existe</h1>
+    <p>Puede que el enlace haya cambiado o que el producto ya no esté disponible. Vuelve al catálogo para ver las ofertas flash de hoy.</p>
+    <div class="actions">
+      <a class="primary" href="/">Ver el catálogo</a>
+      <a class="ghost" href="https://wa.me/message/P3LU5C3LG4JPA1">Escribir por WhatsApp</a>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "name": "cueva-boutique-cms",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Tienda y CMS de Cueva Boutique: React + TypeScript, Netlify Functions y Supabase.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite --config admin/vite.config.ts",
+    "dev:api": "netlify dev",
+    "build": "npm run build:store && npm run build:admin",
+    "build:store": "node scripts/build-store.mjs",
+    "build:admin": "vite build --config admin/vite.config.ts",
+    "seed": "node --env-file=.env scripts/seed-catalog.mjs",
+    "admin": "node --env-file=.env scripts/create-admin.mjs",
+    "backup": "node --env-file=.env scripts/backup.mjs",
+    "doctor": "node --env-file=.env scripts/doctor.mjs",
+    "verify": "node scripts/verify-catalog.mjs",
+    "typecheck": "tsc -p admin/tsconfig.json --noEmit && tsc -p tsconfig.functions.json --noEmit",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "ws": "^8.22.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^3.0.0",
+    "@types/node": "^20.16.11",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8"
+  }
+}
