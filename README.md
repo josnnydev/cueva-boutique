@@ -28,8 +28,9 @@ La tienda actual se conserva como respaldo estático. Si la API falla, los visit
 - Login seguro con Supabase Auth y cookie de sesión firmada (`HttpOnly`).
 - Dashboard con productos activos, valor del catálogo, ofertas, fotos y actividad reciente.
 - CRUD de productos: nombre, descripción, precio, precio anterior, descuento base, categoría, etiqueta, SKU y orden.
-- Subida de foto desde el navegador: se redimensiona a WebP (~1200 px) y se genera una miniatura (~480 px).
-- Activar/desactivar productos y elegir si participan en la rotación diaria.
+- Galería de hasta 8 fotos por producto: se redimensionan a WebP (~1200 px) y se genera una miniatura (~480 px) de cada una.
+- Elegir la foto principal, reordenar la galería y eliminar fotos desde el panel.
+- Marcar productos como disponibles o agotados: los agotados siguen visibles con el cartel «Agotado», pero no se pueden comprar. También se puede elegir si participan en la rotación diaria.
 - CRUD de categorías con orden y visibilidad.
 - Ajustes de tienda, ofertas y publicación de versiones.
 - Historial de versiones, registro de actividad y cambio de contraseña.
@@ -286,9 +287,10 @@ La guía detallada, con el orden exacto y solución de problemas, está en [`PUB
 Abre `https://tu-sitio.netlify.app/admin/`.
 
 - **Panel:** resumen del catálogo y actividad.
-- **Productos:** buscar, filtrar, activar/desactivar, editar y eliminar.
-- **Nuevo producto:** guarda primero los datos; después sube la foto.
-- **Foto:** se convierte a WebP y se sube a Supabase Storage con URL firmada.
+- **Productos:** buscar, filtrar, marcar disponible/agotado, editar y eliminar.
+- **Nuevo producto:** guarda primero los datos; después sube la galería.
+- **Fotos:** puedes subir varias a la vez (máximo 8). La primera es la principal; las demás aparecen en el carrusel y en el visor ampliado de la tienda.
+- **Agotado:** al desactivar «Disponible para comprar», el producto sigue visible con el cartel «Agotado» y el botón de compra queda deshabilitado.
 - **Categorías:** crea, ordena y oculta categorías. No se puede eliminar una categoría con productos.
 - **Ajustes:** datos de contacto, ofertas diarias, versión, build manual y contraseña.
 

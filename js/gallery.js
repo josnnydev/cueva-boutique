@@ -266,9 +266,10 @@
       media.insertBefore(host, media.firstChild);
     }
 
+    var previousIndex = currentIndex(media);
     host.innerHTML = slidesMarkup(images, product.name || "");
     ensureControls(media, images.length > 1);
-    setIndex(media, 0);
+    setIndex(media, Math.min(previousIndex, images.length - 1));
   }
 
   function init(root) {

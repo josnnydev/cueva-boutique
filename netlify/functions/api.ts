@@ -433,7 +433,7 @@ export const handler: Handler = async (event) => {
       const admin = await requireAdmin(event);
       const input = imageOrderSchema.parse(parseBody(event));
       const ordered = await reorderImages(imageOrderPath[1], input.imageIds, admin);
-      await rebuildStore(admin, true);
+      await rebuildStore(admin);
       return ok(ordered);
     }
 
@@ -446,7 +446,7 @@ export const handler: Handler = async (event) => {
       const admin = await requireAdmin(event);
       const input = imageRegisterSchema.parse(parseBody(event));
       const registered = await registerImage(imagesPath[1], input, admin);
-      await rebuildStore(admin, true);
+      await rebuildStore(admin);
       return ok(registered);
     }
 
@@ -463,7 +463,7 @@ export const handler: Handler = async (event) => {
       assertMutationAllowed(event);
       const admin = await requireAdmin(event);
       const deletedImage = await deleteImage(imagesPath[1], imagesPath[2], admin);
-      await rebuildStore(admin, true);
+      await rebuildStore(admin);
       return ok(deletedImage);
     }
 
