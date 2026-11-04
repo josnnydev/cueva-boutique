@@ -91,7 +91,7 @@ export default function Products() {
       setItems((current) =>
         current.map((item) => (item.id === updated.id ? updated : item))
       );
-      show(updated.isActive ? "Producto activado." : "Producto desactivado.", "success");
+      show(updated.isActive ? "Producto disponible." : "Producto marcado como agotado.", "success");
     } catch (caught) {
       show(caught instanceof ApiError ? caught.message : "No se pudo cambiar el estado.", "error");
     } finally {
@@ -172,8 +172,8 @@ export default function Products() {
           aria-label="Filtrar por estado"
         >
           <option value="all">Todos</option>
-          <option value="active">Activos</option>
-          <option value="inactive">Desactivados</option>
+          <option value="active">Disponibles</option>
+          <option value="inactive">Agotados</option>
         </select>
       </div>
 
@@ -245,12 +245,12 @@ export default function Products() {
                         className={`switch ${product.isActive ? "is-on" : ""}`}
                         onClick={() => toggleActive(product)}
                         disabled={busyId === product.id}
-                        aria-label={product.isActive ? "Desactivar producto" : "Activar producto"}
+                        aria-label={product.isActive ? "Marcar como agotado" : "Marcar como disponible"}
                         aria-pressed={product.isActive}
                       >
                         <span />
                       </button>
-                      <small>{product.isActive ? "Activo" : "Oculto"}</small>
+                      <small>{product.isActive ? "Disponible" : "Agotado"}</small>
                     </td>
                     <td>
                       <div className="row-actions">

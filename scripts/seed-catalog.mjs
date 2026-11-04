@@ -41,7 +41,8 @@ function textOf(block, pattern) {
 
 export function parseCatalog(html) {
   const products = [];
-  const articlePattern = /<article\b[^>]*class="product-card"[^>]*>([\s\S]*?)<\/article>/g;
+  const articlePattern =
+    /<article\b[^>]*class="product-card(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/article>/g;
   let match;
   let index = 0;
 

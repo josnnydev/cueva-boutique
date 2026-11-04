@@ -77,3 +77,31 @@ test("formatMoney usa el símbolo y separadores locales", () => {
   assert.equal(formatMoney(2250), "$2,250");
   assert.equal(formatMoney(1250.5), "$1,250.50");
 });
+
+test("la galería incluye todas las fotos con la principal primero", () => {
+  const html = renderProductCard({
+    ...base,
+    images: [
+      { src: "assets/img/productos/a.webp", thumb: "assets/img/productos/a-thumb.webp", alt: "A", width: 480, height: 480 },
+      { src: "assets/img/productos/b.webp", thumb: "assets/img/productos/b-thumb.webp", alt: "B", width: 480, height: 480 },
+      { src: "assets/img/productos/c.webp", thumb: "assets/img/productos/c-thumb.webp", alt: "C", width: 480, height: 480 }
+    ]
+  });
+
+  assert.equal((html.match(/data-gallery-slide\s/g) || []).length, 3);
+  assert.ok(html.includes("data-gallery-prev"));
+  assert.ok(html.includes("data-gallery-next"));
+  assert.ok(html.includes(">1 / 3</span>"));
+  assert.equal((html.match(/data-gallery-open/g) || []).length, 1);
+});
+
+test("un producto agotado se muestra con cartel y sin botón de compra", () => {
+  const html = renderProductCard({ ...base, soldOut: true });
+
+  assert.ok(html.includes("data-sold-out"));
+  assert.ok(html.includes("is-sold-out"));
+  assert.ok(html.includes("product-card__badge--soldout"));
+  assert.ok(html.includes(">Agotado</button>"));
+  assert.ok(!html.includes("data-add-to-cart"));
+  assert.ok(html.includes("data-share-product"));
+});

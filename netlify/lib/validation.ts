@@ -71,7 +71,11 @@ export const imageRegisterSchema = z.object({
   width: z.coerce.number().int().positive().max(8000).optional().nullable(),
   height: z.coerce.number().int().positive().max(8000).optional().nullable(),
   bytes: z.coerce.number().int().positive().max(5 * 1024 * 1024).optional().nullable(),
-  isPrimary: z.boolean().default(true)
+  isPrimary: z.boolean().default(false)
+});
+
+export const imageOrderSchema = z.object({
+  imageIds: z.array(z.string().uuid()).min(1).max(8)
 });
 
 export const releaseSchema = z.object({

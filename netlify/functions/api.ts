@@ -43,6 +43,7 @@ import {
 import {
   deleteImage,
   registerImage,
+  reorderImages,
   signImageUpload,
   updateImage
 } from "../lib/images";
@@ -57,6 +58,7 @@ import {
 import { buildCatalog, catalogEtag, publicCatalogHeaders } from "../lib/catalog";
 import {
   categorySchema,
+  imageOrderSchema,
   imageRegisterSchema,
   imageSignSchema,
   loginSchema,
@@ -420,6 +422,19 @@ export const handler: Handler = async (event) => {
       const admin = await requireAdmin(event);
       const input = imageSignSchema.parse(parseBody(event));
       return ok(await signImageUpload(imageAction[1], input, admin));
+    }
+
+    const imageOrderPath = path.match(
+      /^\/products\/([0-9a-fA-F-]{36})\/images\/order$/
+    );
+
+    if (imageOrderPath && method === "PUT") {
+      assertMutationAllowed(event);
+      const admin = await requireAdmin(event);
+      const input = imageOrderSchema.parse(parseBody(event));
+      const ordered = await reorderImages(imageOrderPath[1], input.imageIds, admin);
+      await rebuildStore(admin, true);
+      return ok(ordered);
     }
 
     const imagesPath = path.match(

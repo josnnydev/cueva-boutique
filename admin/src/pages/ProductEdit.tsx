@@ -424,8 +424,12 @@ export default function ProductEdit() {
                   checked={form.isActive}
                   onChange={(event) => update("isActive", event.target.checked)}
                 />
-                <span>Producto visible en la tienda</span>
+                <span>Disponible para comprar</span>
               </label>
+              <small className="muted">
+                Si lo desactivas, el producto seguirá visible en la tienda con el cartel
+                «Agotado» y no se podrá agregar al carrito.
+              </small>
             </div>
           </section>
 
@@ -457,12 +461,12 @@ export default function ProductEdit() {
 
         <aside className="editor-aside">
           <section className="card">
-            <h2>Foto</h2>
+            <h2>Fotos</h2>
             {product ? (
               <ImageUploader product={product} onUpdated={reloadProduct} />
             ) : (
               <p className="empty">
-                Guarda el producto primero. Después podrás subir y ajustar su foto.
+                Guarda el producto primero. Después podrás subir y ajustar su galería.
               </p>
             )}
           </section>
@@ -472,7 +476,7 @@ export default function ProductEdit() {
             <ul className="detail-list">
               <li>
                 <span>Estado</span>
-                <strong>{form.isActive ? "Visible" : "Oculto"}</strong>
+                <strong>{form.isActive ? "Disponible" : "Agotado"}</strong>
               </li>
               <li>
                 <span>Precio</span>

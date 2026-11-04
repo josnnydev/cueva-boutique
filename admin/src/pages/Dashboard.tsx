@@ -81,10 +81,10 @@ export default function Dashboard() {
 
       <section className="stats-grid" aria-label="Estadísticas principales">
         <article className="stat-card">
-          <span className="stat-card__label">Productos activos</span>
+          <span className="stat-card__label">Productos disponibles</span>
           <strong>{stats.products.active}</strong>
           <small>
-            {stats.products.total} en total · {stats.products.inactive} desactivados
+            {stats.products.total} en total · {stats.products.inactive} agotados
           </small>
         </article>
 

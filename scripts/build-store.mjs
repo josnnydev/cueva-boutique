@@ -51,15 +51,15 @@ function publicStorageUrl(base, storagePath) {
   return `${base.replace(/\/+$/, "")}/storage/v1/object/public/product-images/${encoded}`;
 }
 
-async function mirrorImage(base, storagePath, slug, kind, hasThumb) {
+async function mirrorImage(base, storagePath, slug, kind, hasThumb, key = slug) {
   if (!storagePath) return null;
 
-  const fileName = kind === "thumb" ? `${slug}-thumb.webp` : `${slug}.webp`;
+  const fileName = kind === "thumb" ? `${key}-thumb.webp` : `${key}.webp`;
   const target = path.join(imageDir, fileName);
   const relative = `assets/img/productos/${fileName}`;
 
-  if (kind === "thumb" && !hasThumb && existsSync(path.join(imageDir, `${slug}.webp`))) {
-    return `assets/img/productos/${slug}.webp`;
+  if (kind === "thumb" && !hasThumb && existsSync(path.join(imageDir, `${key}.webp`))) {
+    return `assets/img/productos/${key}.webp`;
   }
 
   try {
@@ -72,8 +72,8 @@ async function mirrorImage(base, storagePath, slug, kind, hasThumb) {
     return relative;
   } catch (error) {
     if (existsSync(target)) return relative;
-    const fullLocal = path.join(imageDir, `${slug}.webp`);
-    if (existsSync(fullLocal)) return `assets/img/productos/${slug}.webp`;
+    const fullLocal = path.join(imageDir, `${key}.webp`);
+    if (existsSync(fullLocal)) return `assets/img/productos/${key}.webp`;
     log(`No se pudo copiar ${storagePath}: ${error.message}. Se usará la URL remota.`);
     return publicStorageUrl(base, storagePath);
   }
@@ -131,9 +131,14 @@ function updateJsonLd(html, products, canonical) {
 
     itemList.numberOfItems = products.length;
     itemList.itemListElement = products.map((product, index) => {
-      const absoluteImage = /^https?:\/\//.test(product.imageSrc)
-        ? product.imageSrc
-        : new URL(product.imageSrc, canonical).href;
+      const gallery = (
+        Array.isArray(product.images) && product.images.length
+          ? product.images.map((image) => image.src)
+          : [product.imageSrc]
+      ).filter(Boolean);
+      const absoluteImages = gallery.map((source) =>
+        /^https?:\/\//.test(source) ? source : new URL(source, canonical).href
+      );
 
       return {
         "@type": "ListItem",
@@ -141,7 +146,7 @@ function updateJsonLd(html, products, canonical) {
         item: {
           "@type": "Product",
           name: product.name,
-          image: absoluteImage,
+          image: absoluteImages.length === 1 ? absoluteImages[0] : absoluteImages,
           description: product.shortDescription,
           category: product.categoryName,
           brand: {
@@ -178,20 +183,43 @@ async function generateCatalog() {
 
   const supabase = createSupabaseClient(url, key);
 
-  const [productsResult, settingsResult] = await Promise.all([
+  const [productsResult, settingsResult, imagesResult] = await Promise.all([
     supabase
-      .from("catalog_public")
-      .select("*")
-      .order("category_sort_order", { ascending: true })
+      .from("products")
+      .select(
+        "id, slug, legacy_anchor, name, short_description, description, price, compare_at_price, base_discount, badge, offer_eligible, sort_order, updated_at, is_active, category:categories(id, slug, name, sort_order, is_active)"
+      )
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
-    supabase.from("settings").select("key,value").in("key", ["store", "site", "daily_offers"])
+    supabase.from("settings").select("key,value").in("key", ["store", "site", "daily_offers"]),
+    supabase
+      .from("product_images")
+      .select("id,product_id,storage_path,thumb_path,alt,width,height,is_primary,sort_order")
+      .order("is_primary", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
   ]);
 
   if (productsResult.error) throw productsResult.error;
   if (settingsResult.error) throw settingsResult.error;
+  if (imagesResult.error) throw imagesResult.error;
 
-  const rows = productsResult.data || [];
+  const galleryByProduct = new Map();
+  for (const image of imagesResult.data || []) {
+    const list = galleryByProduct.get(image.product_id) || [];
+    list.push(image);
+    galleryByProduct.set(image.product_id, list);
+  }
+
+  const rows = (productsResult.data || [])
+    .filter((row) => row.category && row.category.is_active !== false)
+    .sort((a, b) => {
+      const categoryOrder = Number(a.category.sort_order || 0) - Number(b.category.sort_order || 0);
+      if (categoryOrder !== 0) return categoryOrder;
+      const sortOrder = Number(a.sort_order || 0) - Number(b.sort_order || 0);
+      if (sortOrder !== 0) return sortOrder;
+      return String(a.name).localeCompare(String(b.name), "es");
+    });
   if (!rows.length) {
     log("El catálogo está vacío: se conserva la tienda actual para no publicar una tienda sin productos.");
     return;
@@ -207,14 +235,49 @@ async function generateCatalog() {
 
   const products = [];
   for (const row of rows) {
-    const full = await mirrorImage(url, row.image_path, row.slug, "full", Boolean(row.thumb_path));
-    const thumb = row.thumb_path
-      ? await mirrorImage(url, row.thumb_path, row.slug, "thumb", true)
-      : full;
+    const galleryRows = galleryByProduct.get(row.id) || [];
+    const gallery = [];
+
+    if (galleryRows.length) {
+      const mirrored = await Promise.all(
+        galleryRows.map(async (image) => {
+          const key = image.is_primary ? row.slug : `${row.slug}-${String(image.id).slice(0, 8)}`;
+          const full = await mirrorImage(
+            url,
+            image.storage_path,
+            row.slug,
+            "full",
+            Boolean(image.thumb_path),
+            key
+          );
+          const thumb = image.thumb_path
+            ? await mirrorImage(url, image.thumb_path, row.slug, "thumb", true, key)
+            : full;
+
+          if (!full) return null;
+          return {
+            src: full,
+            thumb: thumb || full,
+            alt: image.alt || row.name,
+            width: image.width || 480,
+            height: image.height || 480
+          };
+        })
+      );
+      for (const item of mirrored) {
+        if (item) gallery.push(item);
+      }
+    }
+
+    if (!gallery.length) {
+      log(`El producto ${row.slug} no tiene fotos; se usará la imagen de la tienda.`);
+    }
+
+    const primary = gallery[0];
 
     products.push({
       slug: row.slug,
-      anchor: row.anchor,
+      anchor: row.legacy_anchor || `product-${row.slug}`,
       name: row.name,
       shortDescription: row.short_description || "",
       price: Number(row.price),
@@ -224,14 +287,16 @@ async function generateCatalog() {
           : Number(row.compare_at_price),
       baseDiscount: Number(row.base_discount || 0),
       badge: row.badge || "",
-      categorySlug: row.category_slug,
-      categoryName: row.category_name,
+      categorySlug: row.category.slug,
+      categoryName: row.category.name,
       offerEligible: Boolean(row.offer_eligible),
-      imageSrc: full || "assets/img/logo-cueva.webp",
-      imageThumb: thumb || full || "assets/img/logo-cueva.webp",
-      imageAlt: row.image_alt || row.name,
-      imageWidth: row.image_width || 480,
-      imageHeight: row.image_height || 480,
+      soldOut: row.is_active === false,
+      images: gallery,
+      imageSrc: primary?.src || "assets/img/logo-cueva.webp",
+      imageThumb: primary?.thumb || primary?.src || "assets/img/logo-cueva.webp",
+      imageAlt: primary?.alt || row.name,
+      imageWidth: primary?.width || 480,
+      imageHeight: primary?.height || 480,
       currencySymbol,
       currency: store.currency || "DOP"
     });
@@ -263,7 +328,7 @@ async function generateCatalog() {
   const canonical = canonicalMatch?.[1] || "https://cueva-boutique.netlify.app/";
   html = updateJsonLd(html, products, canonical);
 
-  const version = String(site.version || "1.2.0");
+  const version = String(site.version || "1.3.0");
   const updatedAt = formatDateDisplay(String(site.updatedAt || "")) || "";
 
   html = html.replace(

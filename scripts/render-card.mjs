@@ -36,8 +36,30 @@ export function renderProductCard(product) {
   const width = product.imageWidth || 480;
   const height = product.imageHeight || 480;
 
+  const gallery =
+    Array.isArray(product.images) && product.images.length
+      ? product.images
+      : [{ src: image, thumb, alt, width, height }];
+  const multiple = gallery.length > 1;
+
+  const slides = gallery
+    .map((item, index) => {
+      const full = item.src || image;
+      const preview = item.thumb || full;
+      return `<img class="product-card__slide${index === 0 ? " is-active" : ""}" data-gallery-slide data-full="${escapeHtml(full)}" src="${escapeHtml(preview)}" alt="${escapeHtml(item.alt || alt)}" width="${Number(item.width || width)}" height="${Number(item.height || height)}" loading="lazy" decoding="async"${index === 0 ? "" : " hidden"}>`;
+    })
+    .join("\n                ");
+
+  const controls = `<div class="product-card__slides" data-gallery-slides>
+                ${slides}
+              </div>
+              <button type="button" class="product-card__gallery-nav product-card__gallery-nav--prev" data-gallery-prev aria-label="Foto anterior"${multiple ? "" : " hidden"}>‹</button>
+              <button type="button" class="product-card__gallery-nav product-card__gallery-nav--next" data-gallery-next aria-label="Foto siguiente"${multiple ? "" : " hidden"}>›</button>
+              <span class="product-card__gallery-count" data-gallery-count${multiple ? "" : " hidden"}>1 / ${gallery.length}</span>
+              <button type="button" class="product-card__gallery-open" data-gallery-open aria-label="Ver foto de ${escapeHtml(product.name)} ampliada"></button>`;
+
   const attributes = [
-    `class="product-card"`,
+    `class="product-card${product.soldOut ? " is-sold-out" : ""}"`,
     `id="${escapeHtml(anchor)}"`,
     "data-product-card",
     `data-name="${escapeHtml(product.name)}"`,
@@ -47,11 +69,16 @@ export function renderProductCard(product) {
     `data-category="${escapeHtml(product.categorySlug)}"`,
     ...(permanentOffer ? ["data-permanent-offer"] : []),
     `data-base-discount="${Number(product.baseDiscount || 0)}"`,
-    ...(product.offerEligible === false ? ['data-offer-eligible="false"'] : [])
+    ...(product.offerEligible === false ? ['data-offer-eligible="false"'] : []),
+    ...(product.soldOut ? ["data-sold-out"] : [])
   ].join(" ");
 
   const badges = [];
-  if (Number(product.baseDiscount) > 0) {
+  if (product.soldOut) {
+    badges.push(
+      '<span class="product-card__badge product-card__badge--soldout">Agotado</span>'
+    );
+  } else if (Number(product.baseDiscount) > 0) {
     badges.push(
       `<span class="product-card__badge">−${Number(product.baseDiscount)}%</span>`
     );
@@ -67,8 +94,8 @@ export function renderProductCard(product) {
   }
 
   return `          <article ${attributes}>
-            <div class="product-card__media">
-              <img src="${escapeHtml(thumb)}" alt="${escapeHtml(alt)}" width="${Number(width)}" height="${Number(height)}" loading="lazy" decoding="async">
+            <div class="product-card__media" data-gallery${multiple ? "" : ' data-gallery-single'}>
+              ${controls}
               ${badges.join("\n              ")}
             </div>
             <div class="product-card__body">
@@ -82,10 +109,11 @@ export function renderProductCard(product) {
                 <span class="price-old" data-price-old${oldPrice ? "" : " hidden"}>${oldPrice ? formatMoney(oldPrice, product.currencySymbol || "$") : ""}</span>
               </div>
               <div class="product-card__actions">
-                <button class="btn btn--cart product-card__cart" type="button" data-add-to-cart aria-label="Agregar ${escapeHtml(product.name)} al carrito">
-                  ${CART_ICON}
-                  Agregar
-                </button>
+                ${
+                  product.soldOut
+                    ? `<button class="btn btn--soldout product-card__cart" type="button" disabled aria-label="${escapeHtml(product.name)} agotado">${CART_ICON}Agotado</button>`
+                    : `<button class="btn btn--cart product-card__cart" type="button" data-add-to-cart aria-label="Agregar ${escapeHtml(product.name)} al carrito">${CART_ICON}Agregar</button>`
+                }
                 <button class="btn btn--share product-card__share" type="button" data-share-product aria-label="Compartir ${escapeHtml(product.name)}">
                   ${SHARE_ICON}
                   Compartir

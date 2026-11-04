@@ -844,7 +844,7 @@
     var addButton = target.closest("[data-add-to-cart]");
     if (addButton) {
       var addCard = addButton.closest("[data-product-card]");
-      if (addCard) {
+      if (addCard && !addCard.hasAttribute("data-sold-out")) {
         addToCart(addCard.id, addButton);
       }
       return;
@@ -862,6 +862,23 @@
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && cartPanel && cartPanel.classList.contains("is-open")) {
       closeCart();
+    }
+  });
+
+  // Si un producto pasa a agotado, deja de estar en el carrito.
+  document.addEventListener("cueva:catalog", function () {
+    var changed = false;
+    Object.keys(cart).forEach(function (id) {
+      var card = document.getElementById(id);
+      if (card && card.hasAttribute("data-sold-out")) {
+        delete cart[id];
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      saveCart();
+      renderCart();
     }
   });
 

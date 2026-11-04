@@ -52,6 +52,45 @@
       : "assets/img/logo-cueva.webp";
   }
 
+  function galleryImages(product) {
+    if (Array.isArray(product.images) && product.images.length) {
+      return product.images;
+    }
+    return product.image ? [product.image] : [];
+  }
+
+  function gallerySlides(product) {
+    return galleryImages(product)
+      .map(function (image, index) {
+        var full = image.src || "";
+        var preview = image.thumb || full;
+        return (
+          '<img class="product-card__slide' +
+          (index === 0 ? " is-active" : "") +
+          '" data-gallery-slide data-full="' +
+          escapeHtml(full) +
+          '" src="' +
+          escapeHtml(preview) +
+          '" alt="' +
+          escapeHtml(image.alt || product.name) +
+          '" width="' +
+          Number(image.width || 480) +
+          '" height="' +
+          Number(image.height || 480) +
+          '" loading="lazy" decoding="async"' +
+          (index === 0 ? "" : " hidden") +
+          ">"
+        );
+      })
+      .join("");
+  }
+
+  function syncGallery(card, product) {
+    if (window.CuevaGallery && typeof window.CuevaGallery.sync === "function") {
+      window.CuevaGallery.sync(card, product);
+    }
+  }
+
   function updateVersion(site) {
     if (!site) return;
 
@@ -92,17 +131,54 @@
       card.removeAttribute("data-permanent-offer");
     }
 
+    if (product.soldOut) {
+      card.setAttribute("data-sold-out", "");
+      card.classList.add("is-sold-out");
+    } else {
+      card.removeAttribute("data-sold-out");
+      card.classList.remove("is-sold-out");
+    }
+
     var media = card.querySelector(".product-card__media");
     var image = media ? media.querySelector("img") : null;
 
-    if (image) {
+    if (image && !(window.CuevaGallery && media.querySelector("[data-gallery-slide]"))) {
       image.src = imageSource(product);
       image.alt = (product.image && product.image.alt) || product.name;
       image.width = (product.image && product.image.width) || 480;
       image.height = (product.image && product.image.height) || 480;
     }
 
+    syncGallery(card, product);
+
     if (media) {
+      var badge = media.querySelector(".product-card__badge");
+      var badgeText = product.soldOut
+        ? "Agotado"
+        : product.baseDiscount > 0
+          ? "−" + Number(product.baseDiscount) + "%"
+          : product.compareAtPrice && !product.baseDiscount
+            ? "Oferta"
+            : "";
+
+      if (badgeText) {
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "product-card__badge";
+          media.appendChild(badge);
+        }
+        badge.textContent = badgeText;
+        badge.className =
+          "product-card__badge" +
+          (product.soldOut
+            ? " product-card__badge--soldout"
+            : badgeText === "Oferta"
+              ? " product-card__badge--soft"
+              : "");
+      } else if (badge) {
+        badge.remove();
+      }
+
       var tag = media.querySelector(".product-card__tag");
       if (product.badge) {
         if (!tag) {
@@ -113,6 +189,26 @@
         tag.textContent = product.badge;
       } else if (tag) {
         tag.remove();
+      }
+    }
+
+    var actions = card.querySelector(".product-card__actions");
+    var cartButton = actions ? actions.querySelector(".product-card__cart") : null;
+    if (cartButton) {
+      if (product.soldOut) {
+        cartButton.className = "btn btn--soldout product-card__cart";
+        cartButton.removeAttribute("data-add-to-cart");
+        cartButton.disabled = true;
+        cartButton.setAttribute("aria-label", product.name + " agotado");
+        cartButton.innerHTML =
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l1.2 13H4.8L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Agotado';
+      } else {
+        cartButton.className = "btn btn--cart product-card__cart";
+        cartButton.setAttribute("data-add-to-cart", "");
+        cartButton.disabled = false;
+        cartButton.setAttribute("aria-label", "Agregar " + product.name + " al carrito");
+        cartButton.innerHTML =
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l1.2 13H4.8L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Agregar';
       }
     }
 
@@ -160,7 +256,7 @@
 
   function createCard(product) {
     var article = document.createElement("article");
-    article.className = "product-card";
+    article.className = "product-card" + (product.soldOut ? " is-sold-out" : "");
     article.id = product.anchor;
     article.setAttribute("data-product-card", "");
     article.setAttribute("data-name", product.name);
@@ -178,9 +274,15 @@
     if (product.compareAtPrice && !product.baseDiscount) {
       article.setAttribute("data-permanent-offer", "");
     }
+    if (product.soldOut) {
+      article.setAttribute("data-sold-out", "");
+    }
 
     var badge = "";
-    if (product.baseDiscount > 0) {
+    if (product.soldOut) {
+      badge =
+        '<span class="product-card__badge product-card__badge--soldout">Agotado</span>';
+    } else if (product.baseDiscount > 0) {
       badge =
         '<span class="product-card__badge">−' +
         Number(product.baseDiscount) +
@@ -198,18 +300,19 @@
         "</span>"
       : '<span class="price-old" data-price-old hidden></span>';
 
-    var image = product.image || {};
+    var cartButton = product.soldOut
+      ? '<button class="btn btn--soldout product-card__cart" type="button" disabled aria-label="' +
+        escapeHtml(product.name) +
+        ' agotado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l1.2 13H4.8L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Agotado</button>'
+      : '<button class="btn btn--cart product-card__cart" type="button" data-add-to-cart aria-label="Agregar ' +
+        escapeHtml(product.name) +
+        ' al carrito"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l1.2 13H4.8L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Agregar</button>';
+
     article.innerHTML =
-      '<div class="product-card__media">' +
-      '<img src="' +
-      escapeHtml(imageSource(product)) +
-      '" alt="' +
-      escapeHtml(image.alt || product.name) +
-      '" width="' +
-      (image.width || 480) +
-      '" height="' +
-      (image.height || 480) +
-      '" loading="lazy" decoding="async">' +
+      '<div class="product-card__media" data-gallery>' +
+      '<div class="product-card__slides" data-gallery-slides>' +
+      gallerySlides(product) +
+      "</div>" +
       badge +
       "</div>" +
       '<div class="product-card__body">' +
@@ -229,13 +332,13 @@
       oldPrice +
       "</div>" +
       '<div class="product-card__actions">' +
-      '<button class="btn btn--cart product-card__cart" type="button" data-add-to-cart aria-label="Agregar ' +
-      escapeHtml(product.name) +
-      ' al carrito"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12l1.2 13H4.8L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Agregar</button>' +
+      cartButton +
       '<button class="btn btn--share product-card__share" type="button" data-share-product aria-label="Compartir ' +
       escapeHtml(product.name) +
       '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>Compartir</button>' +
       "</div></div>";
+
+    syncGallery(article, product);
 
     return article;
   }
