@@ -4016,6 +4016,176 @@ body.share-open {
   text-align: center;
 }
 
+/* Imagen lista para el estado de WhatsApp */
+.share-state {
+  margin-top: 1.1rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--line);
+}
+
+.share-state__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.share-state__head .share-dialog__label {
+  margin: 0;
+}
+
+.share-state__size {
+  color: var(--text-muted);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+}
+
+.share-state__card {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 0.85rem;
+  margin-top: 0.65rem;
+  padding: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.share-state__preview {
+  position: relative;
+  display: grid;
+  overflow: hidden;
+  width: 104px;
+  aspect-ratio: 9 / 16;
+  place-items: center;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 10px;
+  background: #08080c;
+}
+
+.share-state__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.share-state__preview img[hidden],
+.share-state__loading[hidden] {
+  display: none;
+}
+
+.share-state__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.54rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.share-state__spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(212, 175, 55, 0.25);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: stateSpin 0.8s linear infinite;
+}
+
+@keyframes stateSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.share-state__info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.45rem;
+  justify-content: center;
+}
+
+.share-state__intro {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.share-state__actions {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.share-state__actions .btn {
+  width: 100%;
+  min-height: 36px;
+  padding: 0.45rem 0.5rem;
+  border-radius: 9px;
+  font-size: 0.64rem;
+  letter-spacing: 0.03em;
+}
+
+.share-state__copy {
+  justify-self: start;
+  padding: 0.15rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--gold-light);
+  font-family: var(--sans);
+  font-size: 0.6rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.share-state__copy:disabled {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
+}
+
+.share-state__copy.is-copied {
+  color: #7ef0a8;
+}
+
+.share-state__message {
+  min-height: 1.05em;
+  color: var(--gold-light);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+.share-state__steps {
+  margin: 0.7rem 0 0;
+  padding-left: 1.05rem;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  line-height: 1.55;
+}
+
+.share-state__steps li {
+  margin-bottom: 0.15rem;
+}
+
+.share-state__steps strong {
+  color: var(--text-soft);
+  font-weight: 500;
+}
+
+@media (max-width: 400px) {
+  .share-state__card {
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .share-state__preview {
+    width: 86px;
+  }
+}
+
 @media (max-width: 560px) {
   .share-dialog {
     width: calc(100% - 1.25rem);

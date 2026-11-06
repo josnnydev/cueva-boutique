@@ -328,7 +328,7 @@ async function generateCatalog() {
   const canonical = canonicalMatch?.[1] || "https://cueva-boutique.netlify.app/";
   html = updateJsonLd(html, products, canonical);
 
-  const version = String(site.version || "1.3.0");
+  const version = String(site.version || "1.4.0");
   const updatedAt = formatDateDisplay(String(site.updatedAt || "")) || "";
 
   html = html.replace(

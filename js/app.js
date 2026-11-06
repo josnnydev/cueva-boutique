@@ -1114,6 +1114,10 @@
 
     prepareShareFile(shareProduct);
 
+    if (window.CuevaStatus) {
+      window.CuevaStatus.load(card);
+    }
+
     shareDialog.classList.add("is-open");
     shareDialog.setAttribute("aria-hidden", "false");
     document.body.classList.add("share-open");
@@ -1146,6 +1150,10 @@
     shareDialog.classList.remove("is-open");
     shareDialog.setAttribute("aria-hidden", "true");
     document.body.classList.remove("share-open");
+
+    if (window.CuevaStatus) {
+      window.CuevaStatus.reset();
+    }
 
     if (shareBackdrop) {
       shareBackdrop.classList.remove("is-visible");

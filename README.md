@@ -19,6 +19,7 @@ La tienda actual se conserva como respaldo estático. Si la API falla, los visit
 - Carrito con cantidades, total, ahorro y pedido completo por WhatsApp.
 - Ofertas flash diarias: 6 productos distintos por día, 3 con 15% y 3 con 10%.
 - Contador de oferta hasta medianoche, filtros por categoría/descuento y botón Compartir.
+- Imagen vertical (1080 × 1920) para el estado de WhatsApp con foto, nombre, descripción y precio: se genera en el navegador desde el diálogo Compartir y se puede descargar o enviar.
 - SEO con Open Graph, Twitter Card, JSON-LD (`ElectronicsStore`, `WebSite`, `ItemList`, `FAQPage`), `robots.txt` y `sitemap.xml`.
 - Versión visible en el pie y actualizada en cada despliegue.
 - Diseño responsive y respaldo estático sin JavaScript.
@@ -68,6 +69,7 @@ Cambio guardado ──► API en vivo (≤ 30 s)
 ├── css/, js/                   # estilos y lógica de la tienda
 │   ├── app.js                  # carrito, ofertas, filtros, compartir
 │   ├── catalog.js              # hidrata la tienda desde la API
+│   ├── status.js               # imagen vertical para el estado de WhatsApp
 │   └── config.js               # WhatsApp, versión y ajustes de ofertas
 ├── admin/                      # panel React + TypeScript (Vite)
 │   ├── src/
@@ -422,6 +424,8 @@ El HTML, CSS y JS originales siguen en la raíz. El respaldo previo al CMS está
 
 ## 13. Historial
 
+- **1.4.0** — 06/11/2026: imagen para el estado de WhatsApp con foto, precio y descripción generada desde el botón Compartir; descarga y envío con el menú del sistema.
+- **1.3.0** — 04/11/2026: galería de hasta 8 fotos por producto, visor ampliado y estado «Agotado» visible sin permitir la compra.
 - **1.2.0** — 01/11/2026: CMS con React + TypeScript, API en Netlify Functions, Supabase (PostgreSQL, Auth y Storage), panel de productos/categorías/ajustes, versiones, actividad, catálogo en vivo y build estático con respaldo.
 - **1.1.0** — 01/11/2026: carrito con checkout por WhatsApp, pagos por transferencia (BHD, Banreservas y Popular), botón Compartir y versión visible.
 
