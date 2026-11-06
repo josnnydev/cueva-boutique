@@ -315,6 +315,26 @@
     return lines;
   }
 
+  function fitWrapped(ctx, value, maxWidth, maxLines, options) {
+    var size = options.max;
+    var lines = [];
+
+    do {
+      ctx.font = options.weight + " " + size + "px " + options.family;
+      lines = wrapLines(ctx, value, maxWidth, maxLines);
+      if (lines.join(" ").indexOf("…") === -1) {
+        break;
+      }
+      size -= options.step;
+    } while (size > options.min);
+
+    return {
+      lines: lines,
+      size: size,
+      lineHeight: Math.round(size * options.lineHeight)
+    };
+  }
+
   function drawStatus(ctx, product, image) {
     ctx.fillStyle = "#08080c";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -376,28 +396,46 @@
 
     ctx.textAlign = "left";
     ctx.fillStyle = "#f6f1e7";
-    ctx.font = '600 68px "Cormorant Garamond", Georgia, "Times New Roman", serif';
-    var titleLines = wrapLines(ctx, product.name, 900, 2);
+    var title = fitWrapped(ctx, product.name, 900, 2, {
+      max: 68,
+      min: 50,
+      step: 4,
+      weight: "600",
+      family: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+      lineHeight: 1.15
+    });
+    ctx.font =
+      '600 ' +
+      title.size +
+      'px "Cormorant Garamond", Georgia, "Times New Roman", serif';
     var cursorY = 1256;
-    titleLines.forEach(function (line) {
+    title.lines.forEach(function (line) {
       ctx.fillText(line, 90, cursorY);
-      cursorY += 78;
+      cursorY += title.lineHeight;
     });
 
     if (product.description) {
       ctx.fillStyle = "rgba(246, 241, 231, 0.72)";
-      ctx.font = '400 33px "Jost", "Helvetica Neue", Arial, sans-serif';
-      var descriptionLines = wrapLines(ctx, product.description, 900, 3);
-      var descriptionY = cursorY + 20;
-      descriptionLines.forEach(function (line) {
-        ctx.fillText(line, 90, descriptionY);
-        descriptionY += 50;
+      var description = fitWrapped(ctx, product.description, 900, 3, {
+        max: 33,
+        min: 28,
+        step: 2,
+        weight: "400",
+        family: '"Jost", "Helvetica Neue", Arial, sans-serif',
+        lineHeight: 1.5
       });
+      ctx.font =
+        '400 ' + description.size + 'px "Jost", "Helvetica Neue", Arial, sans-serif';
+      var descriptionY = cursorY + 20;
+      description.lines.forEach(function (line) {
+        ctx.fillText(line, 90, descriptionY);
+        descriptionY += description.lineHeight;
+      });
+      var contentBottom = descriptionY - description.lineHeight;
+    } else {
+      var contentBottom = cursorY - title.lineHeight;
     }
 
-    var contentBottom = product.description
-      ? descriptionY - 50
-      : cursorY - 78;
     var priceLabelY = Math.min(Math.max(contentBottom + 96, 1512), 1598);
     var priceBaseline = priceLabelY + 102;
 
