@@ -20,6 +20,7 @@ La tienda actual se conserva como respaldo estático. Si la API falla, los visit
 - Ofertas flash diarias: 6 productos distintos por día, 3 con 15% y 3 con 10%.
 - Contador de oferta hasta medianoche, filtros por categoría/descuento y botón Compartir.
 - Imagen vertical (1080 × 1920) para el estado de WhatsApp con foto, nombre, descripción y precio: se genera en el navegador desde el diálogo Compartir y se puede descargar o enviar.
+- Registro anónimo de visitas con `sendBeacon`: cuenta páginas y productos vistos sin guardar IPs ni datos personales.
 - SEO con Open Graph, Twitter Card, JSON-LD (`ElectronicsStore`, `WebSite`, `ItemList`, `FAQPage`), `robots.txt` y `sitemap.xml`.
 - Versión visible en el pie y actualizada en cada despliegue.
 - Diseño responsive y respaldo estático sin JavaScript.
@@ -35,6 +36,7 @@ La tienda actual se conserva como respaldo estático. Si la API falla, los visit
 - CRUD de categorías con orden y visibilidad.
 - Ajustes de tienda, ofertas y publicación de versiones.
 - Historial de versiones, registro de actividad y cambio de contraseña.
+- **Estadísticas de visitas:** visitas de hoy, 7 y 30 días, visitantes únicos por día, gráfico diario, top 10 de páginas/productos y origen del tráfico (Instagram, Facebook, WhatsApp, Google y directo).
 - Diseño responsive para usar desde el móvil.
 
 ---
@@ -68,6 +70,7 @@ Cambio guardado ──► API en vivo (≤ 30 s)
 ├── index.html                  # tienda (respaldo y punto de entrada)
 ├── css/, js/                   # estilos y lógica de la tienda
 │   ├── app.js                  # carrito, ofertas, filtros, compartir
+│   ├── analytics.js            # registro anónimo de visitas (sendBeacon)
 │   ├── catalog.js              # hidrata la tienda desde la API
 │   ├── status.js               # imagen vertical para el estado de WhatsApp
 │   └── config.js               # WhatsApp, versión y ajustes de ofertas
@@ -166,7 +169,27 @@ npm run admin
 
 La contraseña debe tener al menos 8 caracteres. Después puedes cambiarla desde **Ajustes → Seguridad**.
 
+### 4.5 Activar las estadísticas de visitas
+
+Las visitas usan una tabla aparte. En **SQL Editor** ejecuta:
+
+```
+supabase/migrations/20261110000100_visitas.sql
+```
+
+Esto crea `public.visitas` con índices y RLS:
+
+- `anon` solo puede **insertar**; no puede leer, actualizar ni borrar.
+- La API del panel lee con `service_role` después de validar la cookie de administrador.
+- No se guardan IPs ni datos personales; solo ruta, referente, user agent y un identificador aleatorio del navegador (`session_id`).
+
+El panel calcula las estadísticas en **Estadísticas** (`/admin/estadisticas`). La tienda envía cada visita con `navigator.sendBeacon` a `POST /api/public/visits`, sin frenar la página. El servidor ignora bots y visitas del administrador logueado.
+
+Después de ejecutar el SQL, abre la tienda, navega un par de veces y entra a **Estadísticas**. Si acabas de publicar, espera unos segundos: la primera visita puede tardar en aparecer.
+
 ---
+
+
 
 ## 5. Configuración local
 
@@ -294,6 +317,7 @@ Abre `https://tu-sitio.netlify.app/admin/`.
 - **Fotos:** puedes subir varias a la vez (máximo 8). La primera es la principal; las demás aparecen en el carrusel y en el visor ampliado de la tienda.
 - **Agotado:** al desactivar «Disponible para comprar», el producto sigue visible con el cartel «Agotado» y el botón de compra queda deshabilitado.
 - **Categorías:** crea, ordena y oculta categorías. No se puede eliminar una categoría con productos.
+- **Estadísticas:** visitas de hoy, 7 y 30 días, únicos por día, gráfico, top 10 de páginas/productos y referrers.
 - **Ajustes:** datos de contacto, ofertas diarias, versión, build manual y contraseña.
 
 ### Flujo recomendado para publicar cambios
@@ -424,6 +448,7 @@ El HTML, CSS y JS originales siguen en la raíz. El respaldo previo al CMS está
 
 ## 13. Historial
 
+- **1.5.0** — 10/11/2026: estadísticas de visitas anónimas en el panel con Supabase (hoy, 7 y 30 días, únicos por día, gráfico, top de páginas y referrers); registro con `sendBeacon`, RLS de solo inserción y exclusión de administradores y bots.
 - **1.4.0** — 06/11/2026: imagen para el estado de WhatsApp con foto, precio y descripción generada desde el botón Compartir; descarga y envío con el menú del sistema.
 - **1.3.0** — 04/11/2026: galería de hasta 8 fotos por producto, visor ampliado y estado «Agotado» visible sin permitir la compra.
 - **1.2.0** — 01/11/2026: CMS con React + TypeScript, API en Netlify Functions, Supabase (PostgreSQL, Auth y Storage), panel de productos/categorías/ajustes, versiones, actividad, catálogo en vivo y build estático con respaldo.

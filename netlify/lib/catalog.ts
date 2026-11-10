@@ -180,7 +180,7 @@ export async function buildCatalog(): Promise<PublicCatalog> {
   return {
     site: {
       name: String(store.name || "Cueva Boutique"),
-      version: String(site.version || "1.4.0"),
+      version: String(site.version || "1.5.0"),
       updatedAt: String(site.updatedAt || ""),
       whatsapp: String(store.whatsapp || ""),
       generalLink: String(store.generalLink || ""),

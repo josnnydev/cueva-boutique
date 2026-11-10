@@ -48,6 +48,7 @@ import {
   updateImage
 } from "../lib/images";
 import { getStats } from "../lib/stats";
+import { getVisitStats, isBotUserAgent, recordVisit } from "../lib/visits";
 import {
   getSettings,
   listReleases,
@@ -65,7 +66,8 @@ import {
   passwordSchema,
   productSchema,
   releaseSchema,
-  settingsSchema
+  settingsSchema,
+  visitSchema
 } from "../lib/validation";
 
 function requestPath(event: HandlerEvent): string {
@@ -210,6 +212,30 @@ export const handler: Handler = async (event) => {
       }
 
       return json(200, { ok: true, data: catalog, error: null }, headers);
+    }
+
+    // ------------------------------------------------------------------
+    // Visitas anónimas (tienda)
+    // ------------------------------------------------------------------
+    if (path === "/public/visits" && method === "POST") {
+      const origin = getHeader(event, "origin");
+      if (origin && !sameOrigin(event)) {
+        return fail(403, "ORIGIN_NOT_ALLOWED", "Origen no permitido.");
+      }
+
+      const userAgent = getHeader(event, "user-agent");
+      if (isBotUserAgent(userAgent)) {
+        return ok({ recorded: false, reason: "bot" });
+      }
+
+      // Las visitas del administrador logueado no cuentan.
+      const admin = await getAdmin(event);
+      if (admin) {
+        return ok({ recorded: false, reason: "admin" });
+      }
+
+      const input = visitSchema.parse(parseBody(event));
+      return ok({ recorded: await recordVisit(input, userAgent) });
     }
 
     // ------------------------------------------------------------------
@@ -512,6 +538,19 @@ export const handler: Handler = async (event) => {
     if (path === "/stats" && method === "GET") {
       await requireAdmin(event);
       return ok(await getStats());
+    }
+
+    if (path === "/visits" && method === "GET") {
+      await requireAdmin(event);
+      const requestHost = (getHeader(event, "x-forwarded-host") || getHeader(event, "host"))
+        .split(",")[0]
+        .trim();
+      return ok(
+        await getVisitStats(
+          Number(params.get("days") || 30),
+          requestHost || undefined
+        )
+      );
     }
 
     if (path === "/settings" && method === "GET") {

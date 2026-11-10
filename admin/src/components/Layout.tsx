@@ -4,6 +4,7 @@ import { useAuth } from "../auth";
 
 const items = [
   { to: "/", label: "Panel", end: true },
+  { to: "/estadisticas", label: "Estadísticas" },
   { to: "/productos", label: "Productos" },
   { to: "/categorias", label: "Categorías" },
   { to: "/ajustes", label: "Ajustes" },

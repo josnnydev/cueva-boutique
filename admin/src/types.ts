@@ -142,3 +142,38 @@ export type Release = {
   released_at: string;
   deployed_at: string | null;
 };
+
+export type VisitReferrerKey =
+  | "instagram"
+  | "facebook"
+  | "whatsapp"
+  | "google"
+  | "directo"
+  | "otros";
+
+export type VisitStats = {
+  days: number;
+  totals: {
+    today: number;
+    last7: number;
+    last30: number;
+    uniqueToday: number;
+    unique7: number;
+    unique30: number;
+  };
+  daily: Array<{
+    date: string;
+    label: string;
+    visits: number;
+    unique: number;
+  }>;
+  topPages: Array<{ page: string; label: string; visits: number }>;
+  referrers: Array<{
+    key: VisitReferrerKey;
+    label: string;
+    visits: number;
+    share: number;
+  }>;
+  windowTotal: number;
+  generatedAt: string;
+};

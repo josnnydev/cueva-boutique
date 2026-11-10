@@ -11,8 +11,8 @@ window.CUEVA_CONFIG = {
 
   // Versión visible en el pie de la tienda. Súbela en cada actualización publicada.
   // Correcciones: 1.1.1 · Funciones nuevas: 1.2.0
-  version: "1.4.0",
-  updatedAt: "2026-11-06",
+  version: "1.5.0",
+  updatedAt: "2026-11-10",
 
   // WhatsApp principal para pedidos de productos.
   whatsappNumber: "18293815317",

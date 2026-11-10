@@ -78,6 +78,22 @@ export const imageOrderSchema = z.object({
   imageIds: z.array(z.string().uuid()).min(1).max(8)
 });
 
+export const visitSchema = z.object({
+  pagina: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .refine((value) => value.startsWith("/"), "La página debe empezar por /."),
+  referrer: z.string().trim().max(500).optional().nullable(),
+  sessionId: z
+    .string()
+    .trim()
+    .min(8)
+    .max(100)
+    .regex(/^[A-Za-z0-9._-]+$/, "Identificador de sesión no válido.")
+});
+
 export const releaseSchema = z.object({
   version: z.string().regex(/^\d+\.\d+\.\d+$/, "Usa el formato 1.2.0"),
   notes: z.string().trim().max(500).optional().nullable()
