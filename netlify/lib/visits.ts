@@ -97,6 +97,11 @@ export function categorizeReferrer(
     return "directo";
   }
 
+  if (host.startsWith("com.instagram")) return "instagram";
+  if (host.startsWith("com.facebook")) return "facebook";
+  if (host.startsWith("com.whatsapp")) return "whatsapp";
+  if (host.startsWith("com.google.android")) return "google";
+
   if (
     host === "instagram.com" ||
     host.endsWith(".instagram.com") ||
