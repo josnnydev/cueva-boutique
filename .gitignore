@@ -11,6 +11,10 @@ dist/
 backups/
 *.log
 
+# Archivos temporales de editores (bloqueos de LibreOffice, etc.)
+.~lock.*
+*.tmp
+
 # Build anterior que se conserva solo como respaldo local
 cueva-boutique-web.zip
 

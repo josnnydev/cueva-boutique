@@ -1488,9 +1488,26 @@
     });
   });
 
-  // Activa las ofertas del día y las renueva cuando cambia la fecha.
+  // Activa las ofertas del día y las renueva al cruzar la medianoche.
+  // Un solo temporizador largo en vez de revisar cada minuto.
+  function scheduleNextDayRefresh() {
+    var now = new Date();
+    var next = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1,
+      0, 0, 2, 0
+    );
+    var delay = Math.max(1000, next.getTime() - now.getTime());
+
+    window.setTimeout(function () {
+      refreshOffersIfNewDay();
+      scheduleNextDayRefresh();
+    }, delay);
+  }
+
   applyDailyOffers();
-  window.setInterval(refreshOffersIfNewDay, 60000);
+  scheduleNextDayRefresh();
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) {
       refreshOffersIfNewDay();

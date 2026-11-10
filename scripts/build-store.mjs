@@ -9,7 +9,7 @@ const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const dist = path.join(root, "dist");
 const imageDir = path.join(dist, "assets", "img", "productos");
 
-const COPY_FILES = ["index.html", "_headers", "robots.txt", "sitemap.xml", "404.html"];
+const COPY_FILES = ["index.html", "robots.txt", "sitemap.xml", "404.html"];
 const COPY_DIRS = ["css", "js", "assets"];
 
 function log(message) {
@@ -41,6 +41,17 @@ async function copyBase() {
   }
 
   await fs.mkdir(imageDir, { recursive: true });
+
+  // Los PNG de assets/img/productos son los originales de diseño (~11 MB).
+  // La tienda solo usa los WebP generados, así que no se publican.
+  const images = await fs.readdir(imageDir).catch(() => []);
+  const originals = images.filter((name) => name.toLowerCase().endsWith(".png"));
+  await Promise.all(
+    originals.map((name) => fs.rm(path.join(imageDir, name), { force: true }))
+  );
+  if (originals.length) {
+    log(`${originals.length} PNG originales omitidos del despliegue.`);
+  }
 }
 
 function publicStorageUrl(base, storagePath) {
@@ -190,14 +201,20 @@ async function generateCatalog() {
         "id, slug, legacy_anchor, name, short_description, description, price, compare_at_price, base_discount, badge, offer_eligible, sort_order, updated_at, is_active, category:categories(id, slug, name, sort_order, is_active)"
       )
       .order("sort_order", { ascending: true })
-      .order("name", { ascending: true }),
-    supabase.from("settings").select("key,value").in("key", ["store", "site", "daily_offers"]),
+      .order("name", { ascending: true })
+      .limit(1000),
+    supabase
+      .from("settings")
+      .select("key,value")
+      .in("key", ["store", "site", "daily_offers"])
+      .limit(10),
     supabase
       .from("product_images")
       .select("id,product_id,storage_path,thumb_path,alt,width,height,is_primary,sort_order")
       .order("is_primary", { ascending: false })
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true })
+      .limit(5000)
   ]);
 
   if (productsResult.error) throw productsResult.error;

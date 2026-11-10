@@ -3,11 +3,11 @@
 Tienda de audio, relojes, cables y lifestyle con un **CMS propio** para administrar el catálogo sin tocar código. Todo funciona con servicios gratuitos:
 
 - **React + TypeScript** para el panel `/admin`.
-- **Netlify Functions** para la API y el catálogo público.
+- **Netlify Functions** solo para la API del panel, pedidos/visitas y rate limit.
 - **Supabase** para PostgreSQL, autenticación y Storage.
 - **Netlify** para hosting, CDN y builds automáticos.
 
-La tienda actual se conserva como respaldo estático. Si la API falla, los visitantes siguen viendo el catálogo publicado.
+El catálogo viaja **dentro del HTML generado en cada build**. El visitante no consulta Supabase ni las Functions para ver productos: solo descarga estáticos desde el CDN.
 
 ---
 
@@ -44,24 +44,22 @@ La tienda actual se conserva como respaldo estático. Si la API falla, los visit
 ## 2. Arquitectura
 
 ```
-Visitante ──► Netlify CDN ──► index.html + css/js + imágenes
-                  │
-                  └──► /api/public/catalog (Function, caché 30 s)
-                              │
-                              └──► Supabase PostgreSQL
+Visitante ──► Netlify CDN ──► index.html + css/js + imágenes WebP
+                              (catálogo ya incluido, sin Functions)
 
 Admin ──► /admin (React) ──► /api/* (Function)
                                   ├──► Supabase Auth
                                   ├──► PostgreSQL
                                   └──► Storage (fotos)
 
-Cambio guardado ──► API en vivo (≤ 30 s)
+Cambio guardado ──► API en vivo del panel
                 └──► Build hook de Netlify (HTML estático, JSON-LD, sitemap)
 ```
 
-- **API en vivo:** la tienda consulta `/api/public/catalog` al cargar y cada 60 s. Los cambios se ven sin reconstruir.
-- **Build diferido:** las mutaciones piden a Netlify un build (máximo uno cada 10 minutos; las fotos fuerzan uno). El build regenera tarjetas, imágenes locales, JSON-LD, sitemap y versión.
+- **Catálogo estático:** el build consulta Supabase una vez y escribe las 34 tarjetas en el HTML. Una visita normal no invoca Functions ni consulta la base de datos.
+- **Build bajo demanda:** al guardar un producto se pide un build (máximo uno cada 10 minutos; las fotos fuerzan uno). El build regenera tarjetas, imágenes locales, JSON-LD, sitemap y versión.
 - **Respaldo:** `scripts/build-store.mjs` copia la tienda actual y solo la regenera si Supabase responde. Si el catálogo remoto falla o está vacío, publica el HTML anterior.
+- **Sin polling:** no hay refrescos cada 60 s ni al volver a la pestaña. Las ofertas rotan con un temporizador que despierta a medianoche.
 
 ### Estructura
 
@@ -71,7 +69,6 @@ Cambio guardado ──► API en vivo (≤ 30 s)
 ├── css/, js/                   # estilos y lógica de la tienda
 │   ├── app.js                  # carrito, ofertas, filtros, compartir
 │   ├── analytics.js            # registro anónimo de visitas (sendBeacon)
-│   ├── catalog.js              # hidrata la tienda desde la API
 │   ├── status.js               # imagen vertical para el estado de WhatsApp
 │   └── config.js               # WhatsApp, versión y ajustes de ofertas
 ├── admin/                      # panel React + TypeScript (Vite)
@@ -132,20 +129,30 @@ Esto crea:
 - Triggers de `updated_at`, RLS, vista `catalog_public` y bucket `product-images`.
 - Política de lectura pública de las fotos.
 
-Después ejecuta las migraciones de funciones y seguridad, en este orden:
+Después ejecuta las migraciones de funciones, seguridad y rendimiento, en este orden:
 
 ```
 supabase/migrations/20261110000100_visitas.sql
 supabase/migrations/20261110000200_seguridad.sql
+supabase/migrations/20261110000300_rendimiento.sql
 ```
 
-La de seguridad es idempotente y puedes volver a ejecutarla cuando quieras:
+Las dos últimas son idempotentes y puedes volver a ejecutarlas cuando quieras.
+
+La de seguridad:
 
 - Activa RLS en todas las tablas de `public`.
 - Permite leer solo `products` y `categories` activos.
 - Prohíbe a `anon` insertar, editar o borrar.
 - Crea `rate_limits` para el límite de 5 envíos por minuto.
 - Deja las fotos con lectura pública y escritura solo para administradores.
+
+La de rendimiento:
+
+- Crea índices en categoría, precio, fecha, orden e imágenes.
+- Añade `visitas_stats()`, que calcula las estadísticas en Postgres.
+- Añade `registrar_visita()` y `consumir_rate_limit()`: una sola llamada por visita o login.
+- Programa la limpieza de `rate_limits` con `pg_cron` (registros de más de 1 día).
 
 Después ejecuta `supabase/seed.sql` para crear las 5 categorías y los ajustes iniciales.
 
@@ -199,6 +206,8 @@ Esto crea `public.visitas` con índices y RLS:
 - No se guardan IPs ni datos personales; solo ruta, referente, user agent y un identificador aleatorio del navegador (`session_id`).
 
 El panel calcula las estadísticas en **Estadísticas** (`/admin/estadisticas`). La tienda envía cada visita con `navigator.sendBeacon` a `POST /api/public/visits`, sin frenar la página. El servidor ignora bots y visitas del administrador logueado.
+
+Con la migración de rendimiento, Postgres devuelve las estadísticas ya agregadas (`visitas_stats`) y registra cada visita en una sola llamada (`registrar_visita`). El panel nunca descarga las filas de la tabla.
 
 Después de ejecutar el SQL, abre la tienda, navega un par de veces y entra a **Estadísticas**. Si acabas de publicar, espera unos segundos: la primera visita puede tardar en aparecer.
 
@@ -426,11 +435,28 @@ Límites de referencia (pueden cambiar):
 
 Medidas incluidas:
 
+- **Catálogo 100 % estático:** el visitante no invoca Functions ni consulta Supabase para ver productos.
+- **Sin polling:** se eliminó el refresco del catálogo cada 60 s y al volver a la pestaña.
+- **Consultas con columnas explícitas y límites:** nada de `select *` en el panel ni en el build.
+- **Índices** en categoría, precio, fecha, orden e imágenes.
+- **Estadísticas agregadas en Postgres:** `visitas_stats()` devuelve ~2 KB en vez de paginar hasta 60 000 filas.
+- **Una llamada por visita:** `registrar_visita()` hace cupo por IP, deduplicación e inserción en un solo viaje.
+- **Limpieza automática:** `pg_cron` borra `rate_limits` con más de 1 día; si no está activo, queda la limpieza oportunista.
+- **Imágenes WebP con `srcset`** y `loading="lazy"`, salvo la primera imagen visible.
+- **Caché larga:** HTML revalida; CSS/JS/imágenes 7 días; assets del panel con hash, 1 año `immutable`.
+- **PNG originales fuera del despliegue:** `dist` pasó de ~16 MB a ~7 MB.
+- **Panel con lazy load:** el login carga solo el bundle inicial y cada sección se descarga al abrirla.
+- **Fotos con `cacheControl` de 1 año** al subirlas a Supabase Storage.
 - La Function `keepalive` consulta Supabase a diario para evitar la pausa.
-- El catálogo público se cachea 30 s en el CDN.
 - Las imágenes se redimensionan en el navegador antes de subirlas.
 - El build se limita a uno cada 10 minutos (las fotos fuerzan uno).
 - El carrito y las ofertas se calculan en el navegador, sin invocaciones.
+
+### Qué vigilar en los paneles
+
+- **Netlify → Usage:** invocaciones de Functions (deberían bajar a solo visitas y panel), ancho de banda y minutos de build.
+- **Supabase → Reports / Usage:** peticiones a la API REST, salida de Storage y tamaño de la base de datos.
+- **Supabase → Database → Extensions:** confirma que `pg_cron` está activo y que el trabajo `limpiar-rate-limits` aparece en `cron.job`.
 
 ### Copias de seguridad
 
@@ -458,10 +484,10 @@ Faltan variables en Netlify. Revisa `SUPABASE_URL`, `SUPABASE_SECRET_KEY` y `SES
 
 **La tienda no muestra los cambios**
 
-- La API tarda hasta 30 s por la caché del CDN.
+- El catálogo es estático: los cambios aparecen cuando termina el build de Netlify.
+- El panel refleja el cambio al instante; la tienda pública espera al despliegue.
 - Recarga con `Ctrl/Cmd + Shift + R`.
-- Comprueba `/api/public/catalog` y `/api/health`.
-- Si el build falló, revisa **Netlify → Deploys → Logs**.
+- Comprueba `/api/health` y, si el build falló, revisa **Netlify → Deploys → Logs**.
 
 **El build publica la tienda vieja**
 
@@ -475,12 +501,14 @@ Es el respaldo intencional. Ocurre si faltan variables de Supabase, si el catál
 
 **Quiero volver a la tienda anterior**
 
-El HTML, CSS y JS originales siguen en la raíz. El respaldo previo al CMS está en `/tmp/opencode/backup/` durante esta sesión. Para publicar sin CMS, desactiva `cms.enabled` en `js/config.js` o elimina `js/catalog.js` del `index.html`.
+El HTML, CSS y JS originales siguen en la raíz. El respaldo previo al CMS está en `/tmp/opencode/backup/` durante esta sesión. El catálogo ya se publica estático; para volver a una tienda sin build, usa el HTML de respaldo de la raíz.
 
 ---
 
 ## 13. Historial
 
+- **1.6.0** — 10/11/2026: optimización para los planes gratuitos. Catálogo 100 % estático (sin Functions ni Supabase por visita), sin polling, consultas con columnas explícitas y límites, índices, estadísticas agregadas en Postgres, una llamada por visita, limpieza de `rate_limits` con `pg_cron`, caché larga, `srcset`/lazy loading, PNG fuera del despliegue y lazy load del panel.
+- **1.5.1** — 10/11/2026: RLS en todas las tablas, Storage solo para administradores, Cloudflare Turnstile, honeypot, rate limit y cabeceras de seguridad (CSP, HSTS, DENY).
 - **1.5.0** — 10/11/2026: estadísticas de visitas anónimas en el panel con Supabase (hoy, 7 y 30 días, únicos por día, gráfico, top de páginas y referrers); registro con `sendBeacon`, RLS de solo inserción y exclusión de administradores y bots.
 - **1.4.0** — 06/11/2026: imagen para el estado de WhatsApp con foto, precio y descripción generada desde el botón Compartir; descarga y envío con el menú del sistema.
 - **1.3.0** — 04/11/2026: galería de hasta 8 fotos por producto, visor ampliado y estado «Agotado» visible sin permitir la compra.

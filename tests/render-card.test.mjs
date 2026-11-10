@@ -95,6 +95,28 @@ test("la galería incluye todas las fotos con la principal primero", () => {
   assert.equal((html.match(/data-gallery-open/g) || []).length, 1);
 });
 
+test("la primera imagen es prioritaria y el resto carga en lazy", () => {
+  const gallery = [
+    {
+      src: "assets/img/productos/a.webp",
+      thumb: "assets/img/productos/a-thumb.webp",
+      alt: "A",
+      width: 1200,
+      height: 1200
+    }
+  ];
+
+  const first = renderProductCard({ ...base, images: gallery }, 0);
+  assert.ok(first.includes('loading="eager"'));
+  assert.ok(first.includes('fetchpriority="high"'));
+  assert.ok(first.includes('srcset="assets/img/productos/a-thumb.webp 480w, assets/img/productos/a.webp 1200w"'));
+  assert.ok(first.includes("sizes="));
+
+  const later = renderProductCard({ ...base, images: gallery }, 4);
+  assert.ok(later.includes('loading="lazy"'));
+  assert.ok(!later.includes("fetchpriority"));
+});
+
 test("un producto agotado se muestra con cartel y sin botón de compra", () => {
   const html = renderProductCard({ ...base, soldOut: true });
 

@@ -56,7 +56,9 @@ async function uploadToSignedUrl(signedUrl: string, blob: Blob): Promise<void> {
   const response = await fetch(signedUrl, {
     method: "PUT",
     headers: {
-      "Content-Type": "image/webp"
+      "Content-Type": "image/webp",
+      // El CDN de Supabase guarda la foto 1 año: no se revalida en cada visita.
+      "cache-control": "max-age=31536000"
     },
     body: blob
   });

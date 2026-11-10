@@ -9,9 +9,14 @@ export async function getStats() {
         .from("products")
         .select(
           "id,is_active,price,category_id,base_discount,compare_at_price,offer_eligible,updated_at,images:product_images(id)"
-        ),
-      supabase.from("categories").select("id,slug,name").order("sort_order"),
-      supabase.from("product_images").select("bytes"),
+        )
+        .limit(5000),
+      supabase
+        .from("categories")
+        .select("id,slug,name")
+        .order("sort_order")
+        .limit(100),
+      supabase.from("product_images").select("bytes").limit(10000),
       supabase
         .from("site_releases")
         .select("version,notes,released_at")

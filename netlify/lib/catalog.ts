@@ -77,19 +77,26 @@ export async function buildCatalog(): Promise<PublicCatalog> {
         "id, slug, legacy_anchor, name, short_description, description, price, compare_at_price, base_discount, badge, offer_eligible, sort_order, updated_at, is_active, category:categories(id, slug, name, sort_order, is_active)"
       )
       .order("sort_order", { ascending: true })
-      .order("name", { ascending: true }),
+      .order("name", { ascending: true })
+      .limit(1000),
     supabase
       .from("categories")
       .select("id, slug, name, sort_order")
       .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
-    supabase.from("settings").select("key, value").in("key", ["store", "daily_offers", "site"]),
+      .order("sort_order", { ascending: true })
+      .limit(100),
+    supabase
+      .from("settings")
+      .select("key, value")
+      .in("key", ["store", "daily_offers", "site"])
+      .limit(10),
     supabase
       .from("product_images")
       .select("product_id, storage_path, thumb_path, alt, width, height, is_primary, sort_order")
       .order("is_primary", { ascending: false })
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true })
+      .limit(5000)
   ]);
 
   if (productsResult.error) throw productsResult.error;
@@ -210,9 +217,11 @@ export function catalogEtag(catalog: PublicCatalog): string {
 export function publicCatalogHeaders(etag: string): Record<string, string> {
   return {
     ETag: `"${etag}"`,
-    // El navegador revalida; el CDN de Netlify sirve la versión cacheada 30 s.
-    "Cache-Control": "public, max-age=0, must-revalidate",
-    "Netlify-CDN-Cache-Control": "public, s-maxage=30, stale-while-revalidate=300",
+    // La tienda ya no consulta este endpoint en cada visita: el catálogo viaja
+    // en el HTML generado. Si algo lo consume, el CDN lo guarda 1 hora.
+    "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+    "Netlify-CDN-Cache-Control":
+      "public, s-maxage=3600, stale-while-revalidate=86400",
     Vary: "Accept-Encoding"
   };
 }

@@ -11,7 +11,7 @@ window.CUEVA_CONFIG = {
 
   // Versión visible en el pie de la tienda. Súbela en cada actualización publicada.
   // Correcciones: 1.1.1 · Funciones nuevas: 1.2.0
-  version: "1.5.1",
+  version: "1.6.0",
   updatedAt: "2026-11-10",
 
   // WhatsApp principal para pedidos de productos.
@@ -46,11 +46,6 @@ window.CUEVA_CONFIG = {
     seed: 484 // semilla fija: el orden es igual para todos los visitantes
   },
 
-  // Catálogo administrado desde el CMS (Netlify Functions + Supabase).
-  // Si la API no está disponible, la tienda usa el HTML estático generado.
-  cms: {
-    enabled: true,
-    endpoint: "/api/public/catalog",
-    timeout: 6000
-  }
+  // El catálogo viaja dentro del HTML generado en cada build.
+  // La tienda no consulta Supabase ni las Functions al cargar.
 };

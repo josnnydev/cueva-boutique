@@ -1,15 +1,19 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth";
 import { ToastProvider } from "./toast";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Visits from "./pages/Visits";
-import Products from "./pages/Products";
-import ProductEdit from "./pages/ProductEdit";
-import Categories from "./pages/Categories";
-import Settings from "./pages/Settings";
-import Activity from "./pages/Activity";
+
+// El login es la primera pantalla: va en el bundle inicial.
+// El resto se descarga solo cuando el administrador abre cada sección.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Visits = lazy(() => import("./pages/Visits"));
+const Products = lazy(() => import("./pages/Products"));
+const ProductEdit = lazy(() => import("./pages/ProductEdit"));
+const Categories = lazy(() => import("./pages/Categories"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Activity = lazy(() => import("./pages/Activity"));
 
 function LoadingScreen() {
   return (
@@ -34,19 +38,21 @@ function Shell() {
   }
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="estadisticas" element={<Visits />} />
-        <Route path="productos" element={<Products />} />
-        <Route path="productos/nuevo" element={<ProductEdit />} />
-        <Route path="productos/:id" element={<ProductEdit />} />
-        <Route path="categorias" element={<Categories />} />
-        <Route path="ajustes" element={<Settings />} />
-        <Route path="actividad" element={<Activity />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="estadisticas" element={<Visits />} />
+          <Route path="productos" element={<Products />} />
+          <Route path="productos/nuevo" element={<ProductEdit />} />
+          <Route path="productos/:id" element={<ProductEdit />} />
+          <Route path="categorias" element={<Categories />} />
+          <Route path="ajustes" element={<Settings />} />
+          <Route path="actividad" element={<Activity />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 

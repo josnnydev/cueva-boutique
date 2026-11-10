@@ -98,8 +98,11 @@ async function verifyRemote(base) {
         fail(`La tienda publicada no contiene el anchor ${product.anchor}.`);
       }
     }
-    if (html.includes("js/catalog.js") === false) {
-      note("La tienda no referencia js/catalog.js (revisa el despliegue).");
+    if (html.includes("js/catalog.js")) {
+      fail("La tienda publicada todavía carga js/catalog.js (se esperaba catálogo estático).");
+    }
+    if (!html.includes("srcset=")) {
+      fail("La tienda publicada no usa srcset en las imágenes de producto.");
     }
   } catch (error) {
     fail(`No se pudo leer la tienda publicada: ${error.message}`);
@@ -116,7 +119,15 @@ async function verifyLocalBuild() {
   const html = await fs.readFile(indexPath, "utf8");
   const products = parseCatalog(html);
   if (!products.length) fail("dist/index.html no contiene tarjetas de producto.");
-  if (!html.includes("js/catalog.js")) fail("dist/index.html no carga js/catalog.js.");
+  if (html.includes("js/catalog.js")) {
+    fail("dist/index.html todavía carga js/catalog.js (el catálogo ya es estático).");
+  }
+  if (!html.includes("srcset=")) {
+    fail("dist/index.html no usa srcset en las imágenes de producto.");
+  }
+  if (!html.includes('fetchpriority="high"')) {
+    fail("dist/index.html no prioriza la primera imagen visible.");
+  }
 
   const adminIndex = path.join(dist, "admin", "index.html");
   if (!existsSync(adminIndex)) {

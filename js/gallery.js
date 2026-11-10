@@ -1,8 +1,8 @@
 /* ==========================================================================
    Cueva Boutique · Galería de producto
    --------------------------------------------------------------------------
-   Carrusel en las tarjetas y visor ampliado. Funciona con el HTML estático y
-   con las tarjetas que rehidrata js/catalog.js desde la API.
+   Carrusel en las tarjetas y visor ampliado. Funciona con el HTML estático
+   generado en el build; no depende de la API.
    ========================================================================== */
 (function () {
   "use strict";

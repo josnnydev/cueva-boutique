@@ -9,7 +9,11 @@ type ProductInput = z.infer<typeof productSchema>;
 const IMAGE_SELECT =
   "id,storage_path,thumb_path,alt,width,height,bytes,is_primary,sort_order";
 
-const PRODUCT_SELECT = `*, category:categories(id,slug,name), images:product_images(${IMAGE_SELECT})`;
+// Columnas que realmente usa mapProduct(). Nada de SELECT *.
+const PRODUCT_COLUMNS =
+  "id,slug,legacy_anchor,name,short_description,description,price,compare_at_price,base_discount,badge,sku,is_active,offer_eligible,sort_order,seo_title,seo_description,created_at,updated_at";
+
+const PRODUCT_SELECT = `${PRODUCT_COLUMNS}, category:categories(id,slug,name), images:product_images(${IMAGE_SELECT})`;
 
 type ProductRow = Record<string, any>;
 
@@ -273,7 +277,10 @@ export async function touchProduct(id: string, actorId?: string) {
 export async function productCounts() {
   const { data, error } = await getSupabase()
     .from("products")
-    .select("id,is_active,price,category_id,base_discount,compare_at_price,offer_eligible,updated_at");
+    .select(
+      "id,is_active,price,category_id,base_discount,compare_at_price,offer_eligible,updated_at"
+    )
+    .limit(5000);
 
   if (error) throw error;
   return data || [];

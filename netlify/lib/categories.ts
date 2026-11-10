@@ -11,6 +11,10 @@ type CategoryInput = {
   isActive: boolean;
 };
 
+const CATEGORY_SELECT =
+  "id,slug,name,description,sort_order,is_active,created_at,updated_at";
+const CATEGORY_WITH_COUNT = `${CATEGORY_SELECT},products(count)`;
+
 async function categorySlugTaken(slug: string, excludeId?: string): Promise<boolean> {
   let query = getSupabase().from("categories").select("id").eq("slug", slug).limit(1);
   if (excludeId) query = query.neq("id", excludeId);
@@ -32,7 +36,7 @@ async function uniqueCategorySlug(base: string, excludeId?: string): Promise<str
 export async function listCategories() {
   const { data, error } = await getSupabase()
     .from("categories")
-    .select("*, products(count)")
+    .select(CATEGORY_WITH_COUNT)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
@@ -61,7 +65,7 @@ export async function createCategory(input: CategoryInput, actor: AdminUser) {
       sort_order: input.sortOrder,
       is_active: input.isActive
     })
-    .select("*")
+    .select(CATEGORY_SELECT)
     .single();
 
   if (error) throw error;
@@ -84,7 +88,7 @@ export async function updateCategory(
 ) {
   const { data: current, error: readError } = await getSupabase()
     .from("categories")
-    .select("*")
+    .select(CATEGORY_SELECT)
     .eq("id", id)
     .maybeSingle();
 
@@ -106,7 +110,7 @@ export async function updateCategory(
       is_active: input.isActive
     })
     .eq("id", id)
-    .select("*")
+    .select(CATEGORY_SELECT)
     .single();
 
   if (error) throw error;
@@ -139,7 +143,7 @@ export async function deleteCategory(id: string, actor: AdminUser) {
 
   const { data: current, error: readError } = await getSupabase()
     .from("categories")
-    .select("*")
+    .select(CATEGORY_SELECT)
     .eq("id", id)
     .maybeSingle();
 

@@ -23,6 +23,8 @@ import {
 } from "../lib/auth";
 import {
   clearSessionCookie,
+  COOKIE_NAME,
+  readCookie,
   sessionCookie,
   signSession
 } from "../lib/session";
@@ -256,20 +258,21 @@ export const handler: Handler = async (event) => {
         return ok({ recorded: false, reason: "bot" });
       }
 
-      // Las visitas del administrador logueado no cuentan.
-      const admin = await getAdmin(event);
+      // Las visitas del administrador logueado no cuentan. Si no hay cookie,
+      // ni siquiera se consulta admin_profiles (ahorra una consulta por visita).
+      const admin = readCookie(event, COOKIE_NAME) ? await getAdmin(event) : null;
       if (admin) {
         return ok({ recorded: false, reason: "admin" });
       }
 
-      const limit = await rateLimit("visits", ipHash, VISITS_PER_MINUTE);
-      if (!limit.allowed) {
-        // Un beacon nunca debe provocar errores en la consola del visitante.
-        return ok({ recorded: false, reason: "rate" });
-      }
-
       const input = visitSchema.parse(payload);
-      return ok({ recorded: await recordVisit(input, userAgent) });
+      const result = await recordVisit(
+        input,
+        userAgent,
+        ipHash,
+        VISITS_PER_MINUTE
+      );
+      return ok(result);
     }
 
     // ------------------------------------------------------------------

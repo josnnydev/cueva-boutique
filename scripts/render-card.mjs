@@ -23,7 +23,8 @@ export function formatMoney(value, symbol = "$") {
   return `${symbol}${formatted}`;
 }
 
-export function renderProductCard(product) {
+export function renderProductCard(product, index = 0) {
+  const isFirstProduct = index === 0;
   const anchor = product.anchor || `product-${product.slug}`;
   const oldPrice =
     product.compareAtPrice !== null && product.compareAtPrice !== undefined
@@ -43,10 +44,16 @@ export function renderProductCard(product) {
   const multiple = gallery.length > 1;
 
   const slides = gallery
-    .map((item, index) => {
+    .map((item, slideIndex) => {
       const full = item.src || image;
       const preview = item.thumb || full;
-      return `<img class="product-card__slide${index === 0 ? " is-active" : ""}" data-gallery-slide data-full="${escapeHtml(full)}" src="${escapeHtml(preview)}" alt="${escapeHtml(item.alt || alt)}" width="${Number(item.width || width)}" height="${Number(item.height || height)}" loading="lazy" decoding="async"${index === 0 ? "" : " hidden"}>`;
+      const firstVisible = isFirstProduct && slideIndex === 0;
+      const responsive =
+        preview !== full
+          ? ` srcset="${escapeHtml(preview)} 480w, ${escapeHtml(full)} 1200w" sizes="(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 300px"`
+          : "";
+
+      return `<img class="product-card__slide${slideIndex === 0 ? " is-active" : ""}" data-gallery-slide data-full="${escapeHtml(full)}" src="${escapeHtml(preview)}"${responsive} alt="${escapeHtml(item.alt || alt)}" width="${Number(item.width || width)}" height="${Number(item.height || height)}" loading="${firstVisible ? "eager" : "lazy"}" decoding="async"${firstVisible ? ' fetchpriority="high"' : ""}${slideIndex === 0 ? "" : " hidden"}>`;
     })
     .join("\n                ");
 
@@ -124,5 +131,5 @@ export function renderProductCard(product) {
 }
 
 export function renderProductGrid(products) {
-  return products.map(renderProductCard).join("\n\n");
+  return products.map((product, index) => renderProductCard(product, index)).join("\n\n");
 }
