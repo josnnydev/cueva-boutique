@@ -32,13 +32,18 @@ export function fail(
   statusCode: number,
   code: string,
   message: string,
-  details?: unknown
+  details?: unknown,
+  extraHeaders: Record<string, string> = {}
 ): JsonResponse {
-  return json(statusCode, {
-    ok: false,
-    data: null,
-    error: { code, message, details: details ?? null }
-  });
+  return json(
+    statusCode,
+    {
+      ok: false,
+      data: null,
+      error: { code, message, details: details ?? null }
+    },
+    extraHeaders
+  );
 }
 
 export function getHeader(event: HandlerEvent, name: string): string {

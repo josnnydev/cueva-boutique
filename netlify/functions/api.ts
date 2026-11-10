@@ -50,6 +50,13 @@ import {
 import { getStats } from "../lib/stats";
 import { getVisitStats, isBotUserAgent, recordVisit } from "../lib/visits";
 import {
+  HONEYPOT_FIELD,
+  isHoneypotFilled,
+  rateLimit,
+  turnstileEnabled,
+  verifyTurnstile
+} from "../lib/security";
+import {
   getSettings,
   listReleases,
   publishRelease,
@@ -90,6 +97,16 @@ function query(event: HandlerEvent) {
   } catch {
     return new URLSearchParams();
   }
+}
+
+// Envíos de la tienda por minuto y por IP. El registro de visitas ya viene
+// deduplicado por sesión, así que el límite solo frena abuso automatizado.
+const VISITS_PER_MINUTE = 30;
+const LOGIN_PER_MINUTE = 5;
+
+function bodyField(payload: unknown, key: string): unknown {
+  if (!payload || typeof payload !== "object") return undefined;
+  return (payload as Record<string, unknown>)[key];
 }
 
 function assertMutationAllowed(event: HandlerEvent): void {
@@ -192,6 +209,7 @@ export const handler: Handler = async (event) => {
       return ok({
         configured: env.configured,
         missing: missingEnv(),
+        turnstile: turnstileEnabled(),
         time: new Date().toISOString()
       });
     }
@@ -223,7 +241,17 @@ export const handler: Handler = async (event) => {
         return fail(403, "ORIGIN_NOT_ALLOWED", "Origen no permitido.");
       }
 
+      const payload = parseBody(event);
+
+      // Honeypot: si el campo oculto viene relleno, se descarta en silencio.
+      if (isHoneypotFilled(bodyField(payload, HONEYPOT_FIELD))) {
+        return ok({ recorded: false });
+      }
+
+      const ipHash = hashValue(requestIp(event));
       const userAgent = getHeader(event, "user-agent");
+
+      // Bots y administradores se descartan antes de gastar cupo de la IP.
       if (isBotUserAgent(userAgent)) {
         return ok({ recorded: false, reason: "bot" });
       }
@@ -234,7 +262,13 @@ export const handler: Handler = async (event) => {
         return ok({ recorded: false, reason: "admin" });
       }
 
-      const input = visitSchema.parse(parseBody(event));
+      const limit = await rateLimit("visits", ipHash, VISITS_PER_MINUTE);
+      if (!limit.allowed) {
+        // Un beacon nunca debe provocar errores en la consola del visitante.
+        return ok({ recorded: false, reason: "rate" });
+      }
+
+      const input = visitSchema.parse(payload);
       return ok({ recorded: await recordVisit(input, userAgent) });
     }
 
@@ -243,8 +277,36 @@ export const handler: Handler = async (event) => {
     // ------------------------------------------------------------------
     if (path === "/auth/login" && method === "POST") {
       assertMutationAllowed(event);
-      const input = loginSchema.parse(parseBody(event));
+      const payload = parseBody(event);
+      const input = loginSchema.parse(payload);
       const ipHash = hashValue(requestIp(event));
+
+      // Honeypot: misma respuesta que una contraseña incorrecta, sin intentar
+      // autenticar. Así el bot no aprende que fue detectado.
+      if (isHoneypotFilled(bodyField(payload, HONEYPOT_FIELD))) {
+        return fail(401, "INVALID_CREDENTIALS", "Correo o contraseña incorrectos.");
+      }
+
+      // Límite por IP: 5 intentos por minuto.
+      const limit = await rateLimit("login", ipHash, LOGIN_PER_MINUTE);
+      if (!limit.allowed) {
+        return fail(
+          429,
+          "RATE_LIMITED",
+          "Demasiados intentos. Espera un minuto antes de volver a probar.",
+          null,
+          { "Retry-After": String(limit.retryAfter) }
+        );
+      }
+
+      // Cloudflare Turnstile: si está configurado, el token es obligatorio.
+      if (!(await verifyTurnstile(input.turnstileToken, requestIp(event)))) {
+        return fail(
+          400,
+          "CAPTCHA_FAILED",
+          "No pudimos verificar que eres humano. Recarga la página e inténtalo de nuevo."
+        );
+      }
 
       if (await tooManyAttempts(input.email, ipHash)) {
         return fail(

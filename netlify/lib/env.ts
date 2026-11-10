@@ -15,6 +15,8 @@ export const env = {
   SESSION_SECRET: read("SESSION_SECRET"),
   ALLOWED_ORIGIN: read("ALLOWED_ORIGIN"),
   NETLIFY_BUILD_HOOK: read("NETLIFY_BUILD_HOOK"),
+  // Cloudflare Turnstile: si falta el secreto, el captcha queda desactivado.
+  TURNSTILE_SECRET_KEY: read("TURNSTILE_SECRET_KEY"),
   CONTEXT: read("CONTEXT") || "dev",
   get isProduction(): boolean {
     return this.CONTEXT === "production" || this.CONTEXT === "deploy-preview";

@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../api";
 import { useAuth } from "../auth";
 import { useToast } from "../toast";
+import Turnstile, { TURNSTILE_ENABLED } from "../components/Turnstile";
 
 export default function Login() {
   const { login } = useAuth();
@@ -10,16 +11,33 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [honeypot, setHoneypot] = useState("");
+  const [captcha, setCaptcha] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const handleToken = useCallback((token: string) => {
+    setCaptcha(token);
+  }, []);
+
+  const captchaReady = !TURNSTILE_ENABLED || captcha.length > 0;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
+
+    if (!captchaReady) {
+      setError("Espera a que termine la verificación del captcha.");
+      return;
+    }
+
     setBusy(true);
 
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, {
+        website: honeypot,
+        turnstileToken: captcha || undefined
+      });
       show("Bienvenido de nuevo.", "success");
       navigate("/", { replace: true });
     } catch (caught) {
@@ -78,9 +96,29 @@ export default function Login() {
             />
           </label>
 
+          <Turnstile onToken={handleToken} />
+
+          {/* Campo trampa: invisible para personas, tentador para bots. */}
+          <div className="hp-field" aria-hidden="true">
+            <label htmlFor="login-website">No completar este campo</label>
+            <input
+              id="login-website"
+              name="website"
+              type="text"
+              value={honeypot}
+              onChange={(event) => setHoneypot(event.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
+
           <button type="submit" className="btn btn--gold btn--full" disabled={busy}>
             {busy ? "Entrando…" : "Entrar al panel"}
           </button>
+
+          {TURNSTILE_ENABLED && (
+            <p className="field-hint">Protegido por Cloudflare Turnstile.</p>
+          )}
         </form>
 
         <a className="login-back" href="/">

@@ -16,7 +16,11 @@ export function slugify(value: string): string {
 
 export const loginSchema = z.object({
   email: z.string().trim().email().max(160),
-  password: z.string().min(6).max(200)
+  password: z.string().min(6).max(200),
+  // Campo trampa: debe llegar vacío. Si trae algo, es un bot.
+  website: z.string().max(200).optional(),
+  // Token de Cloudflare Turnstile (opcional si el captcha está desactivado).
+  turnstileToken: z.string().max(2048).optional()
 });
 
 export const passwordSchema = z.object({
@@ -64,9 +68,24 @@ export const imageSignSchema = z.object({
   kind: z.enum(["full", "thumb"]).default("full")
 });
 
+// Rutas que genera la API: products/<slug>/<uuid>-<full|thumb>.<ext>
+// Se valida el patrón para que un cliente no pueda registrar una ruta arbitraria.
+const STORAGE_PATH_RE =
+  /^products\/[a-z0-9]+(?:-[a-z0-9]+)*\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-(?:full|thumb)\.(?:webp|jpg|png)$/;
+
 export const imageRegisterSchema = z.object({
-  path: z.string().min(3).max(300),
-  thumbPath: z.string().min(3).max(300).optional().nullable(),
+  path: z
+    .string()
+    .min(3)
+    .max(300)
+    .regex(STORAGE_PATH_RE, "La ruta de la imagen no es válida."),
+  thumbPath: z
+    .string()
+    .min(3)
+    .max(300)
+    .regex(STORAGE_PATH_RE, "La ruta de la miniatura no es válida.")
+    .optional()
+    .nullable(),
   alt: z.string().trim().max(160).optional().nullable(),
   width: z.coerce.number().int().positive().max(8000).optional().nullable(),
   height: z.coerce.number().int().positive().max(8000).optional().nullable(),
@@ -85,13 +104,21 @@ export const visitSchema = z.object({
     .min(1)
     .max(200)
     .refine((value) => value.startsWith("/"), "La página debe empezar por /."),
-  referrer: z.string().trim().max(500).optional().nullable(),
+  referrer: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((value) => !value || /^https?:\/\//i.test(value), "Referente no válido.")
+    .optional()
+    .nullable(),
   sessionId: z
     .string()
     .trim()
     .min(8)
     .max(100)
-    .regex(/^[A-Za-z0-9._-]+$/, "Identificador de sesión no válido.")
+    .regex(/^[A-Za-z0-9._-]+$/, "Identificador de sesión no válido."),
+  // Campo trampa del formulario; en la tienda siempre va vacío.
+  website: z.string().max(200).optional()
 });
 
 export const releaseSchema = z.object({

@@ -7,6 +7,8 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   root,
   base: "/admin/",
+  // Las variables VITE_* viven en el .env de la raíz del proyecto.
+  envDir: fileURLToPath(new URL("..", import.meta.url)),
   plugins: [react()],
   build: {
     outDir: fileURLToPath(new URL("../dist/admin", import.meta.url)),

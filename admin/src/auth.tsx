@@ -13,7 +13,11 @@ import type { AdminUser } from "./types";
 type AuthContextValue = {
   user: AdminUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    extras?: { website?: string; turnstileToken?: string }
+  ) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -48,13 +52,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("cueva:unauthorized", handler);
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const response = await api<{ user: AdminUser }>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
-    });
-    setUser(response.user);
-  }, []);
+  const login = useCallback(
+    async (
+      email: string,
+      password: string,
+      extras?: { website?: string; turnstileToken?: string }
+    ) => {
+      const response = await api<{ user: AdminUser }>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          password,
+          website: extras?.website || "",
+          turnstileToken: extras?.turnstileToken || ""
+        })
+      });
+      setUser(response.user);
+    },
+    []
+  );
 
   const logout = useCallback(async () => {
     try {

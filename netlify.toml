@@ -15,6 +15,23 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# ============================================================================
+# Encabezados de seguridad (todas las rutas)
+# ----------------------------------------------------------------------------
+# El CSP permite solo: el propio sitio, Google Fonts, imágenes de Supabase
+# Storage y Cloudflare Turnstile. No se usa 'unsafe-inline' en scripts.
+# ============================================================================
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.supabase.co; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; form-action 'self'; frame-ancestors 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), clipboard-write=(self)"
+    X-Permitted-Cross-Domain-Policies = "none"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"

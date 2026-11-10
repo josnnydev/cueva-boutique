@@ -132,6 +132,21 @@ Esto crea:
 - Triggers de `updated_at`, RLS, vista `catalog_public` y bucket `product-images`.
 - Política de lectura pública de las fotos.
 
+Después ejecuta las migraciones de funciones y seguridad, en este orden:
+
+```
+supabase/migrations/20261110000100_visitas.sql
+supabase/migrations/20261110000200_seguridad.sql
+```
+
+La de seguridad es idempotente y puedes volver a ejecutarla cuando quieras:
+
+- Activa RLS en todas las tablas de `public`.
+- Permite leer solo `products` y `categories` activos.
+- Prohíbe a `anon` insertar, editar o borrar.
+- Crea `rate_limits` para el límite de 5 envíos por minuto.
+- Deja las fotos con lectura pública y escritura solo para administradores.
+
 Después ejecuta `supabase/seed.sql` para crear las 5 categorías y los ajustes iniciales.
 
 ### 4.3 Credenciales
@@ -186,6 +201,19 @@ Esto crea `public.visitas` con índices y RLS:
 El panel calcula las estadísticas en **Estadísticas** (`/admin/estadisticas`). La tienda envía cada visita con `navigator.sendBeacon` a `POST /api/public/visits`, sin frenar la página. El servidor ignora bots y visitas del administrador logueado.
 
 Después de ejecutar el SQL, abre la tienda, navega un par de veces y entra a **Estadísticas**. Si acabas de publicar, espera unos segundos: la primera visita puede tardar en aparecer.
+
+### 4.6 Activar Cloudflare Turnstile (opcional)
+
+El captcha del login es opcional: si no configuras las claves, el login funciona igual.
+
+1. Crea una cuenta gratis en Cloudflare y añade un sitio en **Turnstile**.
+2. Copia la **Site Key** y el **Secret Key**.
+3. En Netlify → **Environment variables** añade:
+   - `VITE_TURNSTILE_SITE_KEY` → Site Key (pública, se compila en el panel).
+   - `TURNSTILE_SECRET_KEY` → Secret Key (solo servidor).
+4. Vuelve a desplegar para que el panel se recompile con la Site Key.
+
+Si `TURNSTILE_SECRET_KEY` existe pero el panel no se recompiló con la Site Key, nadie podrá entrar: configura siempre las dos a la vez. Puedes comprobarlo en `GET /api/health` (campo `turnstile`).
 
 ---
 
@@ -372,15 +400,20 @@ El formato es `MAYOR.MENOR.PARCHE` (`1.2.1`). Para cambios de funciones usa `1.3
 ## 10. Seguridad
 
 - El panel no contiene claves de Supabase. Todo pasa por Netlify Functions.
-- `SUPABASE_SECRET_KEY` y `SESSION_SECRET` solo existen en Netlify y en tu `.env` local.
+- `SUPABASE_SECRET_KEY` y `SESSION_SECRET` solo existen en Netlify y en tu `.env` local. El navegador nunca recibe una clave con privilegios.
+- `.gitignore` excluye cualquier `.env*`; la plantilla `.env.example` se versiona sin valores.
 - La sesión es una cookie firmada con HMAC-SHA256, `HttpOnly`, `SameSite=Lax` y `Secure` en producción. Dura 8 horas.
 - Las mutaciones exigen misma origen y la cabecera `X-CB-Request: 1`.
-- RLS activo en todas las tablas; el acceso directo con `anon` no devuelve datos.
-- Límite de 5 intentos fallidos por correo + IP cada 15 minutos.
+- RLS activo en todas las tablas de `public`. `anon` solo puede leer `products` y `categories` con `is_active = true`; no puede insertar, editar ni borrar.
+- Storage: `product-images` es de lectura pública; subir, actualizar y borrar exige ser administrador activo (`public.is_admin()`).
+- Límite de 5 intentos de login por IP y minuto, más 5 fallos por correo + IP cada 15 minutos.
+- Cloudflare Turnstile en el login y campo honeypot oculto en los formularios. Si el honeypot viene relleno, el envío se descarta en silencio.
+- Todo lo que llega de un formulario se valida con Zod en el servidor antes de tocar Supabase.
+- Las fotos se suben con URL firmada, solo imágenes (`webp`, `jpeg`, `png`) y máximo 5 MB por archivo; la ruta la genera el servidor.
 - Cambiar la contraseña invalida las sesiones anteriores (`session_version`).
-- Las fotos se suben con URL firmada y tamaño máximo de 5 MB por archivo.
 - `audit_log` registra las acciones del panel.
-- `/admin/*` se sirve con `noindex`, `no-store`, `X-Frame-Options: DENY` y `nosniff`.
+- Encabezados globales: CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, HSTS y `Permissions-Policy`.
+- `/admin/*` se sirve además con `noindex` y `no-store`.
 
 ---
 
