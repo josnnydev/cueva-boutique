@@ -49,9 +49,19 @@
     );
   }
 
-  function readId(storage) {
+  // Acceder a localStorage puede lanzar si el navegador bloquea cookies.
+  function storage(kind) {
     try {
-      var value = storage.getItem(STORAGE_KEY);
+      return window[kind] || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function readId(store) {
+    if (!store) return "";
+    try {
+      var value = store.getItem(STORAGE_KEY);
       if (value && /^[A-Za-z0-9._-]{8,100}$/.test(value)) return value;
     } catch (error) {
       // Almacenamiento bloqueado (modo privado o cookies restringidas).
@@ -60,13 +70,16 @@
   }
 
   function sessionId() {
-    var stored = readId(window.localStorage);
+    var local = storage("localStorage");
+    var session = storage("sessionStorage");
+
+    var stored = readId(local);
     if (stored) return stored;
 
-    stored = readId(window.sessionStorage);
+    stored = readId(session);
     if (stored) {
       try {
-        window.localStorage.setItem(STORAGE_KEY, stored);
+        local && local.setItem(STORAGE_KEY, stored);
       } catch (error) {
         // Se mantiene solo en la sesión actual.
       }
@@ -76,10 +89,10 @@
     if (!memoryId) memoryId = randomId();
 
     try {
-      window.localStorage.setItem(STORAGE_KEY, memoryId);
+      local && local.setItem(STORAGE_KEY, memoryId);
     } catch (error) {
       try {
-        window.sessionStorage.setItem(STORAGE_KEY, memoryId);
+        session && session.setItem(STORAGE_KEY, memoryId);
       } catch (storageError) {
         // Sin almacenamiento: se usa el identificador en memoria.
       }
@@ -161,9 +174,17 @@
     }
   }
 
+  function track() {
+    try {
+      send();
+    } catch (error) {
+      // La analítica nunca debe afectar la tienda.
+    }
+  }
+
   function schedule(delay) {
     window.clearTimeout(timer);
-    timer = window.setTimeout(send, typeof delay === "number" ? delay : 400);
+    timer = window.setTimeout(track, typeof delay === "number" ? delay : 400);
   }
 
   if (document.readyState === "complete") {
@@ -185,7 +206,7 @@
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") {
       window.clearTimeout(timer);
-      send();
+      track();
     }
   });
 
